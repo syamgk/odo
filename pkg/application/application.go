@@ -77,7 +77,7 @@ func List(client *occlient.Client) ([]config.ApplicationInfo, error) {
 				found = true
 			}
 		}
-		if !found {
+		if !found && name != "No resources found." {
 			applications = append(applications, config.ApplicationInfo{
 				Name: name,
 				// if this application is not in config file, it can't be active
