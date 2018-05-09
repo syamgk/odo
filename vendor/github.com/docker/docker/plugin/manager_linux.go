@@ -4,6 +4,7 @@ package plugin
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -27,7 +28,7 @@ import (
 func (pm *Manager) enable(p *v2.Plugin, c *controller, force bool) error {
 	p.Rootfs = filepath.Join(pm.config.Root, p.PluginObj.ID, "rootfs")
 	if p.IsEnabled() && !force {
-		return errors.Wrap(enabledError(p.Name()), "plugin already enabled")
+		return fmt.Errorf("plugin %s is already enabled", p.Name())
 	}
 	spec, err := p.InitSpec(pm.config.ExecRoot)
 	if err != nil {
@@ -161,16 +162,9 @@ func shutdownPlugin(p *v2.Plugin, c *controller, containerdClient libcontainerd.
 	}
 }
 
-func setupRoot(root string) error {
-	if err := mount.MakePrivate(root); err != nil {
-		return errors.Wrap(err, "error setting plugin manager root to private")
-	}
-	return nil
-}
-
 func (pm *Manager) disable(p *v2.Plugin, c *controller) error {
 	if !p.IsEnabled() {
-		return errors.Wrap(errDisabled(p.Name()), "plugin is already disabled")
+		return fmt.Errorf("plugin %s is already disabled", p.Name())
 	}
 
 	c.restart = false
@@ -196,7 +190,6 @@ func (pm *Manager) Shutdown() {
 			shutdownPlugin(p, c, pm.containerdClient)
 		}
 	}
-	mount.Unmount(pm.config.Root)
 }
 
 func (pm *Manager) upgradePlugin(p *v2.Plugin, configDigest digest.Digest, blobsums []digest.Digest, tmpRootFSDir string, privileges *types.PluginPrivileges) (err error) {
@@ -212,12 +205,12 @@ func (pm *Manager) upgradePlugin(p *v2.Plugin, configDigest digest.Digest, blobs
 	// This could happen if the plugin was disabled with `-f` with active mounts.
 	// If there is anything in `orig` is still mounted, this should error out.
 	if err := mount.RecursiveUnmount(orig); err != nil {
-		return systemError{err}
+		return err
 	}
 
 	backup := orig + "-old"
 	if err := os.Rename(orig, backup); err != nil {
-		return errors.Wrap(systemError{err}, "error backing up plugin data before upgrade")
+		return errors.Wrap(err, "error backing up plugin data before upgrade")
 	}
 
 	defer func() {
@@ -243,7 +236,7 @@ func (pm *Manager) upgradePlugin(p *v2.Plugin, configDigest digest.Digest, blobs
 	}()
 
 	if err := os.Rename(tmpRootFSDir, orig); err != nil {
-		return errors.Wrap(systemError{err}, "error upgrading")
+		return errors.Wrap(err, "error upgrading")
 	}
 
 	p.PluginObj.Config = config
@@ -267,7 +260,7 @@ func (pm *Manager) setupNewPlugin(configDigest digest.Digest, blobsums []digest.
 		return types.PluginConfig{}, errors.New("invalid config json")
 	}
 
-	requiredPrivileges := computePrivileges(config)
+	requiredPrivileges, err := computePrivileges(config)
 	if err != nil {
 		return types.PluginConfig{}, err
 	}
@@ -283,7 +276,7 @@ func (pm *Manager) setupNewPlugin(configDigest digest.Digest, blobsums []digest.
 // createPlugin creates a new plugin. take lock before calling.
 func (pm *Manager) createPlugin(name string, configDigest digest.Digest, blobsums []digest.Digest, rootFSDir string, privileges *types.PluginPrivileges, opts ...CreateOpt) (p *v2.Plugin, err error) {
 	if err := pm.config.Store.validateName(name); err != nil { // todo: this check is wrong. remove store
-		return nil, validationError{err}
+		return nil, err
 	}
 
 	config, err := pm.setupNewPlugin(configDigest, blobsums, privileges)

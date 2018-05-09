@@ -25,9 +25,10 @@ import (
 	"github.com/docker/docker/integration-cli/cli/build/fakestorage"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/stringutils"
+	"github.com/docker/docker/pkg/testutil"
+	icmd "github.com/docker/docker/pkg/testutil/cmd"
 	"github.com/go-check/check"
-	"github.com/gotestyourself/gotestyourself/icmd"
-	digest "github.com/opencontainers/go-digest"
+	"github.com/opencontainers/go-digest"
 )
 
 func (s *DockerSuite) TestBuildJSONEmptyRun(c *check.C) {
@@ -1525,7 +1526,7 @@ func (s *DockerSuite) TestBuildContextCleanup(c *check.C) {
 	if err != nil {
 		c.Fatalf("failed to list contents of tmp dir: %s", err)
 	}
-	if err = compareDirectoryEntries(entries, entriesFinal); err != nil {
+	if err = testutil.CompareDirectoryEntries(entries, entriesFinal); err != nil {
 		c.Fatalf("context should have been deleted, but wasn't")
 	}
 
@@ -1549,29 +1550,10 @@ func (s *DockerSuite) TestBuildContextCleanupFailedBuild(c *check.C) {
 	if err != nil {
 		c.Fatalf("failed to list contents of tmp dir: %s", err)
 	}
-	if err = compareDirectoryEntries(entries, entriesFinal); err != nil {
+	if err = testutil.CompareDirectoryEntries(entries, entriesFinal); err != nil {
 		c.Fatalf("context should have been deleted, but wasn't")
 	}
 
-}
-
-// compareDirectoryEntries compares two sets of FileInfo (usually taken from a directory)
-// and returns an error if different.
-func compareDirectoryEntries(e1 []os.FileInfo, e2 []os.FileInfo) error {
-	var (
-		e1Entries = make(map[string]struct{})
-		e2Entries = make(map[string]struct{})
-	)
-	for _, e := range e1 {
-		e1Entries[e.Name()] = struct{}{}
-	}
-	for _, e := range e2 {
-		e2Entries[e.Name()] = struct{}{}
-	}
-	if !reflect.DeepEqual(e1Entries, e2Entries) {
-		return fmt.Errorf("entries differ")
-	}
-	return nil
 }
 
 func (s *DockerSuite) TestBuildCmd(c *check.C) {
@@ -3866,7 +3848,7 @@ func (s *DockerSuite) TestBuildDockerfileOutsideContext(c *check.C) {
 		filepath.Join(ctx, "dockerfile2"),
 	} {
 		result := dockerCmdWithResult("build", "-t", name, "--no-cache", "-f", dockerfilePath, ".")
-		result.Assert(c, icmd.Expected{
+		c.Assert(result, icmd.Matches, icmd.Expected{
 			Err:      "must be within the build context",
 			ExitCode: 1,
 		})
@@ -4070,7 +4052,7 @@ func (s *DockerSuite) TestBuildContainerWithCgroupParent(c *check.C) {
 	if err != nil {
 		c.Fatalf("failed to read '/proc/self/cgroup - %v", err)
 	}
-	selfCgroupPaths := ParseCgroupPaths(string(data))
+	selfCgroupPaths := testutil.ParseCgroupPaths(string(data))
 	_, found := selfCgroupPaths["memory"]
 	if !found {
 		c.Fatalf("unable to find self memory cgroup path. CgroupsPath: %v", selfCgroupPaths)

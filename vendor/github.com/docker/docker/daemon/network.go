@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	apierrors "github.com/docker/docker/api/errors"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/network"
 	clustertypes "github.com/docker/docker/daemon/cluster/provider"
@@ -56,10 +57,10 @@ func (daemon *Daemon) GetNetworkByID(partialID string) (libnetwork.Network, erro
 	list := daemon.GetNetworksByID(partialID)
 
 	if len(list) == 0 {
-		return nil, errors.WithStack(networkNotFound(partialID))
+		return nil, libnetwork.ErrNoSuchNetwork(partialID)
 	}
 	if len(list) > 1 {
-		return nil, errors.WithStack(invalidIdentifier(partialID))
+		return nil, libnetwork.ErrInvalidID(partialID)
 	}
 	return list[0], nil
 }
@@ -286,7 +287,7 @@ func (daemon *Daemon) CreateNetwork(create types.NetworkCreateRequest) (*types.N
 func (daemon *Daemon) createNetwork(create types.NetworkCreateRequest, id string, agent bool) (*types.NetworkCreateResponse, error) {
 	if runconfig.IsPreDefinedNetwork(create.Name) && !agent {
 		err := fmt.Errorf("%s is a pre-defined network and cannot be created", create.Name)
-		return nil, notAllowedError{err}
+		return nil, apierrors.NewRequestForbiddenError(err)
 	}
 
 	var warning string
@@ -348,7 +349,6 @@ func (daemon *Daemon) createNetwork(create types.NetworkCreateRequest, id string
 	n, err := c.NewNetwork(driver, create.Name, id, nwOptions...)
 	if err != nil {
 		if _, ok := err.(libnetwork.ErrDataStoreNotInitialized); ok {
-			// nolint: golint
 			return nil, errors.New("This node is not a swarm manager. Use \"docker swarm init\" or \"docker swarm join\" to connect this node to swarm and try again.")
 		}
 		return nil, err
@@ -504,7 +504,7 @@ func (daemon *Daemon) deleteNetwork(networkID string, dynamic bool) error {
 
 	if runconfig.IsPreDefinedNetwork(nw.Name()) && !dynamic {
 		err := fmt.Errorf("%s is a pre-defined network and cannot be removed", nw.Name())
-		return notAllowedError{err}
+		return apierrors.NewRequestForbiddenError(err)
 	}
 
 	if dynamic && !nw.Info().Dynamic() {
@@ -514,7 +514,7 @@ func (daemon *Daemon) deleteNetwork(networkID string, dynamic bool) error {
 			return nil
 		}
 		err := fmt.Errorf("%s is not a dynamic network", nw.Name())
-		return notAllowedError{err}
+		return apierrors.NewRequestForbiddenError(err)
 	}
 
 	if err := nw.Delete(); err != nil {

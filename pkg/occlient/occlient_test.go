@@ -6,7 +6,106 @@ import (
 	"os"
 	"reflect"
 	"testing"
+
+	// projectv1 "github.com/openshift/api/project/v1"
+	fkprojectclientset "github.com/openshift/client-go/project/clientset/versioned/fake"
+	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	// projectclientset "github.com/openshift/client-go/project/clientset/versioned/typed/project/v1"
+	fkubernetes "k8s.io/client-go/kubernetes/fake"
 )
+
+func Fakenew() (*Client, error) {
+	var client Client
+
+	//    client.kubeConfig = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
+
+	//    config, err := client.kubeConfig.ClientConfig()
+	//    if err != nil {
+	//        return nil, err
+	//    }
+
+	kubeClient := fkubernetes.NewSimpleClientset()
+	client.kubeClient = kubeClient
+
+	//    imageClient, err := imageclientset.NewForConfig(config)
+	//    if err != nil {
+	//        return nil, err
+	//    }
+	//    client.imageClient = imageClient
+	//
+	//    appsClient, err := appsclientset.NewForConfig(config)
+	//    if err != nil {
+	//        return nil, err
+	//    }
+	//    client.appsClient = appsClient
+	//
+	//    buildClient, err := buildclientset.NewForConfig(config)
+	//    if err != nil {
+	//        return nil, err
+	//    }
+	//    client.buildClient = buildClient
+	//
+	//    serviceCatalogClient, err := servicecatalogclienset.NewForConfig(config)
+	//    if err != nil {
+	//        return nil, err
+	//    }
+	//    client.serviceCatalogClient = serviceCatalogClient
+	//
+	// fmt.Println("flag b4 projectClient init")
+	projectClient := fkprojectclientset.NewSimpleClientset().Project()
+	client.projectClient = projectClient
+	//
+	//    routeClient, err := routeclientset.NewForConfig(config)
+	//    if err != nil {
+	//        return nil, err
+	//    }
+	//    client.routeClient = routeClient
+	//
+	//    namespace, _, err := client.kubeConfig.Namespace()
+	//    if err != nil {
+	//        return nil, err
+	//    }
+	//    client.namespace = namespace
+	//
+	//    // The following should go away once we're done with complete migration to
+	//    // client-go
+	//    ocpath, err := getOcBinary()
+	//    if err != nil {
+	//        return nil, errors.Wrap(err, "unable to get oc binary")
+	//    }
+	//    client.ocpath = ocpath
+	//
+	//    if !isServerUp(client.ocpath) {
+	//        return nil, errors.New("Unable to connect to OpenShift cluster, is it down?")
+	//    }
+	//    if !isLoggedIn(client.ocpath) {
+	//        return nil, errors.New("Please log in to the cluster")
+	//    }
+
+	return &client, nil
+}
+
+/// Delete this code
+// func checkError(err error, context string, a ...interface{}) {
+// 	if err != nil {
+// 		//	log.Debugf("Error:\n%v", err)
+// 		if context == "" {
+// 			fmt.Println("ds") //errors.Cause(err))
+// 		} else {
+// 			fmt.Printf(fmt.Sprintf("%s\n", context), a...)
+// 		}
+//
+// 		os.Exit(1)
+// 	}
+// }
+
+/// Delete this code
+
+func getFakeocClient() *Client {
+	client, _ := Fakenew()
+	//	checkError(err, "")
+	return client
+}
 
 func TestGetOcBinary(t *testing.T) {
 
@@ -221,4 +320,68 @@ func Test_parseImageName(t *testing.T) {
 			}
 		})
 	}
+}
+
+// func TestCreateNewProject(t *testing.T) {
+// 	//client := getFakeocClient()
+// 	obj := &projectv1.ProjectRequest{
+// 		ObjectMeta: metav1.ObjectMeta{
+// 			Name: "junkfoo",
+// 		},
+// 	}
+// 	client := fkprojectclientset.NewSimpleClientset(obj)
+//
+// 	_, err := client.Project().ProjectRequests().Create(obj)
+// 	if err != nil {
+// 		t.Errorf("some thing went wrong")
+// 	}
+// }
+
+func TestCreateNewProject(t *testing.T) {
+	// type fields struct {
+	// 	projectClient        projectclientset.ProjectV1Interface
+	// }
+	// type args struct {
+	// 	name string
+	// }
+	// tests := []struct {
+	// 	name    string
+	// 	fields  fields
+	// 	args    args
+	// 	wantErr bool
+	// }{
+	// // TODO: Add test cases.
+	// }
+	// for _, tt := range tests {
+	// 	t.Run(tt.name, func(t *testing.T) {
+	// 		c := &Client{
+	// 			ocpath:               tt.fields.ocpath,
+	// 			kubeClient:           tt.fields.kubeClient,
+	// 			imageClient:          tt.fields.imageClient,
+	// 			appsClient:           tt.fields.appsClient,
+	// 			buildClient:          tt.fields.buildClient,
+	// 			serviceCatalogClient: tt.fields.serviceCatalogClient,
+	// 			projectClient:        tt.fields.projectClient,
+	// 			routeClient:          tt.fields.routeClient,
+	// 			kubeConfig:           tt.fields.kubeConfig,
+	// 			namespace:            tt.fields.namespace,
+	// 		}
+	// 		if err := c.CreateNewProject(tt.args.name); (err != nil) != tt.wantErr {
+	// 			t.Errorf("Client.CreateNewProject() error = %v, wantErr %v", err, tt.wantErr)
+	// 		}
+	// 	})
+	// }
+
+	//newFakeClient := func() *Client {
+	//	return &Client{
+	//		projectClient: fkprojectclientset.NewSimpleClientset().Project(),
+	//	}
+	//}
+	c, _ := Fakenew()
+	fmt.Println("reached")
+	err := c.CreateNewProject("foo")
+	if err != nil {
+		t.Error(err)
+	}
+
 }

@@ -10,7 +10,6 @@ import (
 
 	"github.com/docker/docker/pkg/jsonlog"
 	"github.com/docker/docker/pkg/term"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestError(t *testing.T) {
@@ -199,7 +198,9 @@ func TestJSONMessageDisplayWithJSONError(t *testing.T) {
 
 	jsonMessage = JSONMessage{Error: &JSONError{401, "Anything"}}
 	err = jsonMessage.Display(data, &noTermInfo{})
-	assert.EqualError(t, err, "authentication is required")
+	if err == nil || err.Error() != "Authentication is required." {
+		t.Fatalf("Expected an error \"Authentication is required.\", got %q", err)
+	}
 }
 
 func TestDisplayJSONMessagesStreamInvalidJSON(t *testing.T) {

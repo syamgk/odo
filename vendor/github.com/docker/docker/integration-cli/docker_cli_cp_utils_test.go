@@ -231,7 +231,7 @@ func getTestDir(c *check.C, label string) (tmpDir string) {
 }
 
 func isCpNotExist(err error) bool {
-	return strings.Contains(strings.ToLower(err.Error()), "could not find the file")
+	return strings.Contains(err.Error(), "no such file or directory") || strings.Contains(err.Error(), "cannot find the file specified")
 }
 
 func isCpDirNotExist(err error) bool {

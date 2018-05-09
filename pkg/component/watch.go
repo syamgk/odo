@@ -9,7 +9,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+	componentlabels "github.com/redhat-developer/odo/pkg/component/labels"
 	"github.com/redhat-developer/odo/pkg/occlient"
+	"github.com/redhat-developer/odo/pkg/util"
 
 	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
@@ -27,14 +30,7 @@ func addRecursiveWatch(watcher *fsnotify.Watcher, path string, ignores []string)
 		}
 		return fmt.Errorf("error introspecting path %s: %v", path, err)
 	}
-
-	mode := file.Mode()
-	if mode.IsRegular() {
-		log.Debugf("adding watch on path %s", path)
-		err = watcher.Add(path)
-		if err != nil {
-			return fmt.Errorf("error adding watcher for path %s: %v", path, err)
-		}
+	if !file.IsDir() {
 		return nil
 	}
 
@@ -74,11 +70,32 @@ func addRecursiveWatch(watcher *fsnotify.Watcher, path string, ignores []string)
 	return nil
 }
 
-// WatchAndPush watches path, if something changes in  that path it calls PushLocal
+// WatchAndPush watches directory dir, if something changes in that directory calls push
 // ignores .git/* by default
 // inspired by https://github.com/openshift/origin/blob/e785f76194c57bd0e1674c2f2776333e1e0e4e78/pkg/oc/cli/cmd/rsync/rsync.go#L257
-func WatchAndPush(client *occlient.Client, componentName string, applicationName, path string, asFile bool, out io.Writer) error {
-	log.Debugf("starting WatchAndPush, path: %s, component: %s", path, componentName)
+func WatchAndPush(client *occlient.Client, componentName string, applicationName, dir string, out io.Writer) error {
+	// We need to make sure that thee is a '/' at the end, otherwise rsync will sync files to wrong directory
+	dir = fmt.Sprintf("%s/", dir)
+
+	log.Debugf("starting WatchAndPush, dir: %s, component: %s", dir, componentName)
+
+	// For now this fixed to s2i application location
+	// TODO: in future we should figure out something starter than hardcoding this
+	targetPodPath := "/opt/app-root/src"
+
+	// Find DeploymentConfig for component
+	componentLabels := componentlabels.GetLabels(componentName, applicationName, false)
+	componentSelector := util.ConvertLabelsToSelector(componentLabels)
+	dc, err := client.GetOneDeploymentConfigFromSelector(componentSelector)
+	if err != nil {
+		return errors.Wrap(err, "unable to get deployment for component")
+	}
+	// Find Pod for component
+	podSelector := fmt.Sprintf("deploymentconfig=%s", dc.Name)
+	pod, err := client.GetOnePodFromSelector(podSelector)
+	if err != nil {
+		return errors.Wrap(err, "unable to get pod for component")
+	}
 
 	// it might be better to expose this as argument in the future
 	ignores := []string{
@@ -142,9 +159,9 @@ func WatchAndPush(client *occlient.Client, componentName string, applicationName
 			}
 		}
 	}()
-	err = addRecursiveWatch(watcher, path, ignores)
+	err = addRecursiveWatch(watcher, dir, ignores)
 	if err != nil {
-		return fmt.Errorf("error watching source path %s: %v", path, err)
+		return fmt.Errorf("error watching source path %s: %v", dir, err)
 	}
 
 	delay := 1 * time.Second
@@ -157,7 +174,7 @@ func WatchAndPush(client *occlient.Client, componentName string, applicationName
 			return watchError
 		}
 		if showWaitingMessage {
-			fmt.Fprintf(out, "Waiting for something to change in %s\n", path)
+			fmt.Fprintf(out, "Waiting for something to change in %s\n", dir)
 			showWaitingMessage = false
 		}
 		// if a change happened more than 'delay' seconds ago, sync it now.
@@ -170,7 +187,9 @@ func WatchAndPush(client *occlient.Client, componentName string, applicationName
 				fmt.Fprintf(out, "File %s changed\n", file)
 			}
 			fmt.Fprintf(out, "Pushing files...\n")
-			err := PushLocal(client, componentName, applicationName, path, asFile, out)
+			syncOutput, err := client.SyncPath(dir, pod.Name, targetPodPath)
+			fmt.Fprintf(out, syncOutput)
+
 			if err != nil {
 				// Intentionally not exiting on error here.
 				// We don't want to break watch when push failed, it might be fixed with the next change.

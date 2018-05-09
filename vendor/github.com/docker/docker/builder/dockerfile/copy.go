@@ -56,7 +56,6 @@ type copyInstruction struct {
 	cmdName                 string
 	infos                   []copyInfo
 	dest                    string
-	chownStr                string
 	allowLocalDecompression bool
 }
 
@@ -370,7 +369,6 @@ func downloadSource(output io.Writer, stdout io.Writer, srcURL string) (remote b
 type copyFileOptions struct {
 	decompress bool
 	archiver   *archive.Archiver
-	chownPair  idtools.IDPair
 }
 
 func performCopyForInfo(dest copyInfo, source copyInfo, options copyFileOptions) error {
@@ -390,7 +388,7 @@ func performCopyForInfo(dest copyInfo, source copyInfo, options copyFileOptions)
 		return errors.Wrapf(err, "source path not found")
 	}
 	if src.IsDir() {
-		return copyDirectory(archiver, srcPath, destPath, options.chownPair)
+		return copyDirectory(archiver, srcPath, destPath)
 	}
 	if options.decompress && archive.IsArchivePath(srcPath) && !source.noDecompress {
 		return archiver.UntarPath(srcPath, destPath)
@@ -407,28 +405,26 @@ func performCopyForInfo(dest copyInfo, source copyInfo, options copyFileOptions)
 		// is a symlink
 		destPath = filepath.Join(destPath, filepath.Base(source.path))
 	}
-	return copyFile(archiver, srcPath, destPath, options.chownPair)
+	return copyFile(archiver, srcPath, destPath)
 }
 
-func copyDirectory(archiver *archive.Archiver, source, dest string, chownPair idtools.IDPair) error {
-	destExists, err := isExistingDirectory(dest)
-	if err != nil {
-		return errors.Wrapf(err, "failed to query destination path")
-	}
+func copyDirectory(archiver *archive.Archiver, source, dest string) error {
 	if err := archiver.CopyWithTar(source, dest); err != nil {
 		return errors.Wrapf(err, "failed to copy directory")
 	}
-	return fixPermissions(source, dest, chownPair, !destExists)
+	return fixPermissions(source, dest, archiver.IDMappings.RootPair())
 }
 
-func copyFile(archiver *archive.Archiver, source, dest string, chownPair idtools.IDPair) error {
-	if err := idtools.MkdirAllAndChownNew(filepath.Dir(dest), 0755, chownPair); err != nil {
+func copyFile(archiver *archive.Archiver, source, dest string) error {
+	rootIDs := archiver.IDMappings.RootPair()
+
+	if err := idtools.MkdirAllAndChownNew(filepath.Dir(dest), 0755, rootIDs); err != nil {
 		return errors.Wrapf(err, "failed to create new directory")
 	}
 	if err := archiver.CopyFileWithTar(source, dest); err != nil {
 		return errors.Wrapf(err, "failed to copy file")
 	}
-	return fixPermissions(source, dest, chownPair, false)
+	return fixPermissions(source, dest, rootIDs)
 }
 
 func endsInSlash(path string) bool {

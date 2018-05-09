@@ -51,7 +51,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -166,7 +165,7 @@ func NewClient(host string, version string, client *http.Client, httpHeaders map
 	}
 
 	if client != nil {
-		if _, ok := client.Transport.(http.RoundTripper); !ok {
+		if _, ok := client.Transport.(*http.Transport); !ok {
 			return nil, fmt.Errorf("unable to verify TLS configuration, invalid transport %v", client.Transport)
 		}
 	} else {
@@ -220,9 +219,9 @@ func (cli *Client) getAPIPath(p string, query url.Values) string {
 	var apiPath string
 	if cli.version != "" {
 		v := strings.TrimPrefix(cli.version, "v")
-		apiPath = path.Join(cli.basePath, "/v"+v+p)
+		apiPath = cli.basePath + "/v" + v + p
 	} else {
-		apiPath = path.Join(cli.basePath, p)
+		apiPath = cli.basePath + p
 	}
 
 	u := &url.URL{

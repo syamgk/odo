@@ -24,10 +24,9 @@ type ExitStatus struct {
 	ExitCode int
 }
 
-// UnmountIpcMount unmounts Ipc related mounts.
+// UnmountIpcMounts unmounts Ipc related mounts.
 // This is a NOOP on windows.
-func (container *Container) UnmountIpcMount(unmount func(pth string) error) error {
-	return nil
+func (container *Container) UnmountIpcMounts(unmount func(pth string) error) {
 }
 
 // IpcMounts returns the list of Ipc related mounts.

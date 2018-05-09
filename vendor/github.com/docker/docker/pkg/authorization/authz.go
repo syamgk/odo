@@ -176,7 +176,10 @@ type authorizationError struct {
 	error
 }
 
-func (authorizationError) Forbidden() {}
+// HTTPErrorStatusCode returns the authorization error status code (forbidden)
+func (e authorizationError) HTTPErrorStatusCode() int {
+	return http.StatusForbidden
+}
 
 func newAuthorizationError(plugin, msg string) authorizationError {
 	return authorizationError{error: fmt.Errorf("authorization denied by plugin %s: %s", plugin, msg)}

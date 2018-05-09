@@ -1,6 +1,8 @@
 package fake
 
 import (
+	"fmt"
+
 	v1 "github.com/openshift/api/project/v1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	testing "k8s.io/client-go/testing"
@@ -22,5 +24,10 @@ func (c *FakeProjectRequests) Create(projectRequest *v1.ProjectRequest) (result 
 	if obj == nil {
 		return nil, err
 	}
+	fmt.Printf("obj: %#v\n", obj)
+	fmt.Println("fake creare")
+	_, ok := obj.(*v1.Project)
+	fmt.Println("fake creare after")
+	fmt.Println("ok", ok)
 	return obj.(*v1.Project), err
 }

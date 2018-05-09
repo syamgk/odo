@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	apierrors "github.com/docker/docker/api/errors"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/container"
 	"github.com/docker/docker/layer"
@@ -30,7 +31,7 @@ func (daemon *Daemon) ContainerRm(name string, config *types.ContainerRmConfig) 
 	// Container state RemovalInProgress should be used to avoid races.
 	if inProgress := container.SetRemovalInProgress(); inProgress {
 		err := fmt.Errorf("removal of container %s is already in progress", name)
-		return stateConflictError{err}
+		return apierrors.NewBadRequestError(err)
 	}
 	defer container.ResetRemovalInProgress()
 
@@ -86,7 +87,7 @@ func (daemon *Daemon) cleanupContainer(container *container.Container, forceRemo
 				procedure = "Unpause and then " + strings.ToLower(procedure)
 			}
 			err := fmt.Errorf("You cannot remove a %s container %s. %s", state, container.ID, procedure)
-			return stateConflictError{err}
+			return apierrors.NewRequestConflictError(err)
 		}
 		if err := daemon.Kill(container); err != nil {
 			return fmt.Errorf("Could not kill running container %s, cannot remove - %v", container.ID, err)
@@ -127,16 +128,13 @@ func (daemon *Daemon) cleanupContainer(container *container.Container, forceRemo
 		return errors.Wrapf(err, "unable to remove filesystem for %s", container.ID)
 	}
 
-	linkNames := daemon.linkIndex.delete(container)
+	daemon.linkIndex.delete(container)
 	selinuxFreeLxcContexts(container.ProcessLabel)
 	daemon.idIndex.Delete(container.ID)
 	daemon.containers.Delete(container.ID)
 	daemon.containersReplica.Delete(container)
 	if e := daemon.removeMountPoints(container, removeVolume); e != nil {
 		logrus.Error(e)
-	}
-	for _, name := range linkNames {
-		daemon.releaseName(name)
 	}
 	container.SetRemoved()
 	stateCtr.del(container.ID)
@@ -150,7 +148,7 @@ func (daemon *Daemon) cleanupContainer(container *container.Container, forceRemo
 func (daemon *Daemon) VolumeRm(name string, force bool) error {
 	err := daemon.volumeRm(name)
 	if err != nil && volumestore.IsInUse(err) {
-		return stateConflictError{err}
+		return apierrors.NewRequestConflictError(err)
 	}
 	if err == nil || force {
 		daemon.volumes.Purge(name)

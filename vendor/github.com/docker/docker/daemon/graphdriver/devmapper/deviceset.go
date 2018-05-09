@@ -1479,9 +1479,12 @@ func (devices *DeviceSet) closeTransaction() error {
 }
 
 func determineDriverCapabilities(version string) error {
-	// Kernel driver version >= 4.27.0 support deferred removal
+	/*
+	 * Driver version 4.27.0 and greater support deferred activation
+	 * feature.
+	 */
 
-	logrus.Debugf("devicemapper: kernel dm driver version is %s", version)
+	logrus.Debugf("devicemapper: driver version is %s", version)
 
 	versionSplit := strings.Split(version, ".")
 	major, err := strconv.Atoi(versionSplit[0])
@@ -1860,7 +1863,7 @@ func (devices *DeviceSet) initDevmapper(doInit bool) (retErr error) {
 
 	if devices.thinPoolDevice == "" {
 		if devices.metadataLoopFile != "" || devices.dataLoopFile != "" {
-			logrus.Warn("devmapper: Usage of loopback devices is strongly discouraged for production use. Please use `--storage-opt dm.thinpooldev` or use `man dockerd` to refer to dm.thinpooldev section.")
+			logrus.Warn("devmapper: Usage of loopback devices is strongly discouraged for production use. Please use `--storage-opt dm.thinpooldev` or use `man docker` to refer to dm.thinpooldev section.")
 		}
 	}
 
@@ -2664,7 +2667,7 @@ func NewDeviceSet(root string, doInit bool, options []string, uidMaps, gidMaps [
 			devices.metaDataLoopbackSize = size
 		case "dm.fs":
 			if val != "ext4" && val != "xfs" {
-				return nil, fmt.Errorf("devmapper: Unsupported filesystem %s", val)
+				return nil, fmt.Errorf("devmapper: Unsupported filesystem %s\n", val)
 			}
 			devices.filesystem = val
 		case "dm.mkfsarg":
@@ -2786,7 +2789,7 @@ func NewDeviceSet(root string, doInit bool, options []string, uidMaps, gidMaps [
 				Level: int(level),
 			})
 		default:
-			return nil, fmt.Errorf("devmapper: Unknown option %s", key)
+			return nil, fmt.Errorf("devmapper: Unknown option %s\n", key)
 		}
 	}
 

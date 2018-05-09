@@ -1,18 +1,19 @@
 package volume
 
 import (
+	"errors"
 	"fmt"
 	"os"
-	"runtime"
+	"path/filepath"
 
 	"github.com/docker/docker/api/types/mount"
-	"github.com/pkg/errors"
 )
 
 var errBindNotExist = errors.New("bind source path does not exist")
 
 type validateOpts struct {
-	skipBindSourceCheck bool
+	skipBindSourceCheck   bool
+	skipAbsolutePathCheck bool
 }
 
 func validateMountConfig(mnt *mount.Mount, options ...func(*validateOpts)) error {
@@ -29,8 +30,10 @@ func validateMountConfig(mnt *mount.Mount, options ...func(*validateOpts)) error
 		return &errMountConfig{mnt, err}
 	}
 
-	if err := validateAbsolute(mnt.Target); err != nil {
-		return &errMountConfig{mnt, err}
+	if !opts.skipAbsolutePathCheck {
+		if err := validateAbsolute(mnt.Target); err != nil {
+			return &errMountConfig{mnt, err}
+		}
 	}
 
 	switch mnt.Type {
@@ -94,31 +97,6 @@ func validateMountConfig(mnt *mount.Mount, options ...func(*validateOpts)) error
 		if _, err := ConvertTmpfsOptions(mnt.TmpfsOptions, mnt.ReadOnly); err != nil {
 			return &errMountConfig{mnt, err}
 		}
-	case mount.TypeNamedPipe:
-		if runtime.GOOS != "windows" {
-			return &errMountConfig{mnt, errors.New("named pipe bind mounts are not supported on this OS")}
-		}
-
-		if len(mnt.Source) == 0 {
-			return &errMountConfig{mnt, errMissingField("Source")}
-		}
-
-		if mnt.BindOptions != nil {
-			return &errMountConfig{mnt, errExtraField("BindOptions")}
-		}
-
-		if mnt.ReadOnly {
-			return &errMountConfig{mnt, errExtraField("ReadOnly")}
-		}
-
-		if detectMountType(mnt.Source) != mount.TypeNamedPipe {
-			return &errMountConfig{mnt, fmt.Errorf("'%s' is not a valid pipe path", mnt.Source)}
-		}
-
-		if detectMountType(mnt.Target) != mount.TypeNamedPipe {
-			return &errMountConfig{mnt, fmt.Errorf("'%s' is not a valid pipe path", mnt.Target)}
-		}
-
 	default:
 		return &errMountConfig{mnt, errors.New("mount type unknown")}
 	}
@@ -135,18 +113,18 @@ func (e *errMountConfig) Error() string {
 }
 
 func errExtraField(name string) error {
-	return errors.Errorf("field %s must not be specified", name)
+	return fmt.Errorf("field %s must not be specified", name)
 }
 func errMissingField(name string) error {
-	return errors.Errorf("field %s must not be empty", name)
+	return fmt.Errorf("field %s must not be empty", name)
 }
 
 func validateAbsolute(p string) error {
 	p = convertSlash(p)
-	if isAbsPath(p) {
+	if filepath.IsAbs(p) {
 		return nil
 	}
-	return errors.Errorf("invalid mount path: '%s' mount path must be absolute", p)
+	return fmt.Errorf("invalid mount path: '%s' mount path must be absolute", p)
 }
 
 // ValidateTmpfsMountDestination validates the destination of tmpfs mount.
@@ -159,18 +137,4 @@ func ValidateTmpfsMountDestination(dest string) error {
 		return err
 	}
 	return validateAbsolute(dest)
-}
-
-type validationError struct {
-	err error
-}
-
-func (e validationError) Error() string {
-	return e.err.Error()
-}
-
-func (e validationError) InvalidParameter() {}
-
-func (e validationError) Cause() error {
-	return e.err
 }

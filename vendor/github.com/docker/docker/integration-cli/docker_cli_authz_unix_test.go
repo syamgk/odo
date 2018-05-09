@@ -209,7 +209,7 @@ func (s *DockerAuthzSuite) TestAuthZPluginAllowRequest(c *check.C) {
 	s.d.Start(c, "--authorization-plugin="+testAuthZPlugin)
 	s.ctrl.reqRes.Allow = true
 	s.ctrl.resRes.Allow = true
-	s.d.LoadBusybox(c)
+	c.Assert(s.d.LoadBusybox(), check.IsNil)
 
 	// Ensure command successful
 	out, err := s.d.Cmd("run", "-d", "busybox", "top")
@@ -322,7 +322,7 @@ func (s *DockerAuthzSuite) TestAuthZPluginAllowEventStream(c *check.C) {
 	s.d.Start(c, "--authorization-plugin="+testAuthZPlugin)
 	s.ctrl.reqRes.Allow = true
 	s.ctrl.resRes.Allow = true
-	s.d.LoadBusybox(c)
+	c.Assert(s.d.LoadBusybox(), check.IsNil)
 
 	startTime := strconv.FormatInt(daemonTime(c).Unix(), 10)
 	// Add another command to to enable event pipelining
@@ -418,7 +418,7 @@ func (s *DockerAuthzSuite) TestAuthZPluginEnsureLoadImportWorking(c *check.C) {
 	s.d.Start(c, "--authorization-plugin="+testAuthZPlugin, "--authorization-plugin="+testAuthZPlugin)
 	s.ctrl.reqRes.Allow = true
 	s.ctrl.resRes.Allow = true
-	s.d.LoadBusybox(c)
+	c.Assert(s.d.LoadBusybox(), check.IsNil)
 
 	tmp, err := ioutil.TempDir("", "test-authz-load-import")
 	c.Assert(err, check.IsNil)
@@ -445,7 +445,7 @@ func (s *DockerAuthzSuite) TestAuthZPluginHeader(c *check.C) {
 	s.d.Start(c, "--debug", "--authorization-plugin="+testAuthZPlugin)
 	s.ctrl.reqRes.Allow = true
 	s.ctrl.resRes.Allow = true
-	s.d.LoadBusybox(c)
+	c.Assert(s.d.LoadBusybox(), check.IsNil)
 
 	daemonURL, err := url.Parse(s.d.Sock())
 

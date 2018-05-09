@@ -28,20 +28,16 @@ func (daemon *Daemon) ContainerCopy(name string, res string) (io.ReadCloser, err
 		return nil, err
 	}
 
+	if res[0] == '/' || res[0] == '\\' {
+		res = res[1:]
+	}
+
 	// Make sure an online file-system operation is permitted.
 	if err := daemon.isOnlineFSOperationPermitted(container); err != nil {
-		return nil, systemError{err}
+		return nil, err
 	}
 
-	data, err := daemon.containerCopy(container, res)
-	if err == nil {
-		return data, nil
-	}
-
-	if os.IsNotExist(err) {
-		return nil, containerFileNotFound{res, name}
-	}
-	return nil, systemError{err}
+	return daemon.containerCopy(container, res)
 }
 
 // ContainerStatPath stats the filesystem resource at the specified path in the
@@ -54,18 +50,10 @@ func (daemon *Daemon) ContainerStatPath(name string, path string) (stat *types.C
 
 	// Make sure an online file-system operation is permitted.
 	if err := daemon.isOnlineFSOperationPermitted(container); err != nil {
-		return nil, systemError{err}
+		return nil, err
 	}
 
-	stat, err = daemon.containerStatPath(container, path)
-	if err == nil {
-		return stat, nil
-	}
-
-	if os.IsNotExist(err) {
-		return nil, containerFileNotFound{path, name}
-	}
-	return nil, systemError{err}
+	return daemon.containerStatPath(container, path)
 }
 
 // ContainerArchivePath creates an archive of the filesystem resource at the
@@ -79,18 +67,10 @@ func (daemon *Daemon) ContainerArchivePath(name string, path string) (content io
 
 	// Make sure an online file-system operation is permitted.
 	if err := daemon.isOnlineFSOperationPermitted(container); err != nil {
-		return nil, nil, systemError{err}
+		return nil, nil, err
 	}
 
-	content, stat, err = daemon.containerArchivePath(container, path)
-	if err == nil {
-		return content, stat, nil
-	}
-
-	if os.IsNotExist(err) {
-		return nil, nil, containerFileNotFound{path, name}
-	}
-	return nil, nil, systemError{err}
+	return daemon.containerArchivePath(container, path)
 }
 
 // ContainerExtractToDir extracts the given archive to the specified location
@@ -107,18 +87,10 @@ func (daemon *Daemon) ContainerExtractToDir(name, path string, copyUIDGID, noOve
 
 	// Make sure an online file-system operation is permitted.
 	if err := daemon.isOnlineFSOperationPermitted(container); err != nil {
-		return systemError{err}
+		return err
 	}
 
-	err = daemon.containerExtractToDir(container, path, copyUIDGID, noOverwriteDirNonDir, content)
-	if err == nil {
-		return nil
-	}
-
-	if os.IsNotExist(err) {
-		return containerFileNotFound{path, name}
-	}
-	return systemError{err}
+	return daemon.containerExtractToDir(container, path, copyUIDGID, noOverwriteDirNonDir, content)
 }
 
 // containerStatPath stats the filesystem resource at the specified path in this
@@ -325,9 +297,6 @@ func (daemon *Daemon) containerExtractToDir(container *container.Container, path
 }
 
 func (daemon *Daemon) containerCopy(container *container.Container, resource string) (rc io.ReadCloser, err error) {
-	if resource[0] == '/' || resource[0] == '\\' {
-		resource = resource[1:]
-	}
 	container.Lock()
 
 	defer func() {

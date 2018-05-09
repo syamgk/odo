@@ -1,18 +1,24 @@
 package main
 
 import (
-	"github.com/docker/docker/client"
+	"encoding/json"
+	"net/http"
+
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/dockerversion"
 	"github.com/docker/docker/integration-cli/checker"
+	"github.com/docker/docker/integration-cli/request"
 	"github.com/go-check/check"
-	"golang.org/x/net/context"
 )
 
 func (s *DockerSuite) TestGetVersion(c *check.C) {
-	cli, err := client.NewEnvClient()
+	status, body, err := request.SockRequest("GET", "/version", nil, daemonHost())
+	c.Assert(status, checker.Equals, http.StatusOK)
 	c.Assert(err, checker.IsNil)
-	defer cli.Close()
 
-	v, err := cli.ServerVersion(context.Background())
+	var v types.Version
+
+	c.Assert(json.Unmarshal(body, &v), checker.IsNil)
+
 	c.Assert(v.Version, checker.Equals, dockerversion.Version, check.Commentf("Version mismatch"))
 }

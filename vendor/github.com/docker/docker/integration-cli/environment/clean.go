@@ -1,14 +1,16 @@
 package environment
 
 import (
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/client"
-	"github.com/gotestyourself/gotestyourself/icmd"
-	"golang.org/x/net/context"
+	volumetypes "github.com/docker/docker/api/types/volume"
+	"github.com/docker/docker/integration-cli/request"
+	icmd "github.com/docker/docker/pkg/testutil/cmd"
 )
 
 type testingT interface {
@@ -24,21 +26,15 @@ type logT interface {
 // and removing everything else. It's meant to run after any tests so that they don't
 // depend on each others.
 func (e *Execution) Clean(t testingT, dockerBinary string) {
-	cli, err := client.NewEnvClient()
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	defer cli.Close()
-
 	if (e.DaemonPlatform() != "windows") || (e.DaemonPlatform() == "windows" && e.Isolation() == "hyperv") {
 		unpauseAllContainers(t, dockerBinary)
 	}
 	deleteAllContainers(t, dockerBinary)
 	deleteAllImages(t, dockerBinary, e.protectedElements.images)
-	deleteAllVolumes(t, cli)
-	deleteAllNetworks(t, cli, e.DaemonPlatform())
+	deleteAllVolumes(t, dockerBinary)
+	deleteAllNetworks(t, dockerBinary, e.DaemonPlatform())
 	if e.DaemonPlatform() == "linux" {
-		deleteAllPlugins(t, cli, dockerBinary)
+		deleteAllPlugins(t, dockerBinary)
 	}
 }
 
@@ -112,17 +108,20 @@ func deleteAllImages(t testingT, dockerBinary string, protectedImages map[string
 	}
 }
 
-func deleteAllVolumes(t testingT, c client.APIClient) {
-	var errs []string
-	volumes, err := getAllVolumes(c)
+func deleteAllVolumes(t testingT, dockerBinary string) {
+	volumes, err := getAllVolumes()
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
+	var errs []string
 	for _, v := range volumes {
-		err := c.VolumeRemove(context.Background(), v.Name, true)
+		status, b, err := request.SockRequest("DELETE", "/volumes/"+v.Name, nil, request.DaemonHost())
 		if err != nil {
 			errs = append(errs, err.Error())
 			continue
+		}
+		if status != http.StatusNoContent {
+			errs = append(errs, fmt.Sprintf("error deleting volume %s: %s", v.Name, string(b)))
 		}
 	}
 	if len(errs) > 0 {
@@ -130,16 +129,20 @@ func deleteAllVolumes(t testingT, c client.APIClient) {
 	}
 }
 
-func getAllVolumes(c client.APIClient) ([]*types.Volume, error) {
-	volumes, err := c.VolumeList(context.Background(), filters.Args{})
+func getAllVolumes() ([]*types.Volume, error) {
+	var volumes volumetypes.VolumesListOKBody
+	_, b, err := request.SockRequest("GET", "/volumes", nil, request.DaemonHost())
 	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &volumes); err != nil {
 		return nil, err
 	}
 	return volumes.Volumes, nil
 }
 
-func deleteAllNetworks(t testingT, c client.APIClient, daemonPlatform string) {
-	networks, err := getAllNetworks(c)
+func deleteAllNetworks(t testingT, dockerBinary string, daemonPlatform string) {
+	networks, err := getAllNetworks()
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -152,10 +155,13 @@ func deleteAllNetworks(t testingT, c client.APIClient, daemonPlatform string) {
 			// nat is a pre-defined network on Windows and cannot be removed
 			continue
 		}
-		err := c.NetworkRemove(context.Background(), n.ID)
+		status, b, err := request.SockRequest("DELETE", "/networks/"+n.Name, nil, request.DaemonHost())
 		if err != nil {
 			errs = append(errs, err.Error())
 			continue
+		}
+		if status != http.StatusNoContent {
+			errs = append(errs, fmt.Sprintf("error deleting network %s: %s", n.Name, string(b)))
 		}
 	}
 	if len(errs) > 0 {
@@ -163,25 +169,33 @@ func deleteAllNetworks(t testingT, c client.APIClient, daemonPlatform string) {
 	}
 }
 
-func getAllNetworks(c client.APIClient) ([]types.NetworkResource, error) {
-	networks, err := c.NetworkList(context.Background(), types.NetworkListOptions{})
+func getAllNetworks() ([]types.NetworkResource, error) {
+	var networks []types.NetworkResource
+	_, b, err := request.SockRequest("GET", "/networks", nil, request.DaemonHost())
 	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &networks); err != nil {
 		return nil, err
 	}
 	return networks, nil
 }
 
-func deleteAllPlugins(t testingT, c client.APIClient, dockerBinary string) {
-	plugins, err := getAllPlugins(c)
+func deleteAllPlugins(t testingT, dockerBinary string) {
+	plugins, err := getAllPlugins()
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
 	var errs []string
 	for _, p := range plugins {
-		err := c.PluginRemove(context.Background(), p.Name, types.PluginRemoveOptions{Force: true})
+		pluginName := p.Name
+		status, b, err := request.SockRequest("DELETE", "/plugins/"+pluginName+"?force=1", nil, request.DaemonHost())
 		if err != nil {
 			errs = append(errs, err.Error())
 			continue
+		}
+		if status != http.StatusOK {
+			errs = append(errs, fmt.Sprintf("error deleting plugin %s: %s", p.Name, string(b)))
 		}
 	}
 	if len(errs) > 0 {
@@ -189,9 +203,13 @@ func deleteAllPlugins(t testingT, c client.APIClient, dockerBinary string) {
 	}
 }
 
-func getAllPlugins(c client.APIClient) (types.PluginsListResponse, error) {
-	plugins, err := c.PluginList(context.Background(), filters.Args{})
+func getAllPlugins() (types.PluginsListResponse, error) {
+	var plugins types.PluginsListResponse
+	_, b, err := request.SockRequest("GET", "/plugins", nil, request.DaemonHost())
 	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &plugins); err != nil {
 		return nil, err
 	}
 	return plugins, nil

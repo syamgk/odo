@@ -37,9 +37,7 @@ func (daemon *Daemon) Reload(conf *config.Config) (err error) {
 		}
 	}()
 
-	if err := daemon.reloadPlatform(conf, attributes); err != nil {
-		return err
-	}
+	daemon.reloadPlatform(conf, attributes)
 	daemon.reloadDebug(conf, attributes)
 	daemon.reloadMaxConcurrentDownloadsAndUploads(conf, attributes)
 	daemon.reloadShutdownTimeout(conf, attributes)

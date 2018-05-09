@@ -6,21 +6,21 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	eventtypes "github.com/docker/docker/api/types/events"
-	"github.com/docker/docker/client"
 	eventstestutils "github.com/docker/docker/daemon/events/testutils"
 	"github.com/docker/docker/integration-cli/checker"
 	"github.com/docker/docker/integration-cli/cli"
 	"github.com/docker/docker/integration-cli/cli/build"
+	"github.com/docker/docker/integration-cli/request"
+	"github.com/docker/docker/pkg/testutil"
+	icmd "github.com/docker/docker/pkg/testutil/cmd"
 	"github.com/go-check/check"
-	"github.com/gotestyourself/gotestyourself/icmd"
-	"golang.org/x/net/context"
 )
 
 func (s *DockerSuite) TestEventsTimestampFormats(c *check.C) {
@@ -69,7 +69,7 @@ func (s *DockerSuite) TestEventsUntag(c *check.C) {
 		Command: []string{dockerBinary, "events", "--since=1"},
 		Timeout: time.Millisecond * 2500,
 	})
-	result.Assert(c, icmd.Expected{Timeout: true})
+	c.Assert(result, icmd.Matches, icmd.Expected{Timeout: true})
 
 	events := strings.Split(result.Stdout(), "\n")
 	nEvents := len(events)
@@ -230,7 +230,7 @@ func (s *DockerSuite) TestEventsImageImport(c *check.C) {
 	cleanedContainerID := strings.TrimSpace(out)
 
 	since := daemonUnixTime(c)
-	out, err := RunCommandPipelineWithOutput(
+	out, _, err := testutil.RunCommandPipelineWithOutput(
 		exec.Command(dockerBinary, "export", cleanedContainerID),
 		exec.Command(dockerBinary, "import", "-"),
 	)
@@ -263,7 +263,7 @@ func (s *DockerSuite) TestEventsImageLoad(c *check.C) {
 	dockerCmd(c, "load", "-i", "saveimg.tar")
 
 	result := icmd.RunCommand("rm", "-rf", "saveimg.tar")
-	result.Assert(c, icmd.Success)
+	c.Assert(result, icmd.Matches, icmd.Success)
 
 	out, _ = dockerCmd(c, "images", "-q", "--no-trunc", myImageName)
 	imageID := strings.TrimSpace(out)
@@ -499,15 +499,9 @@ func (s *DockerSuite) TestEventsResize(c *check.C) {
 	cID := strings.TrimSpace(out)
 	c.Assert(waitRun(cID), checker.IsNil)
 
-	cli, err := client.NewEnvClient()
-	c.Assert(err, checker.IsNil)
-	defer cli.Close()
-
-	options := types.ResizeOptions{
-		Height: 80,
-		Width:  24,
-	}
-	err = cli.ContainerResize(context.Background(), cID, options)
+	endpoint := "/containers/" + cID + "/resize?h=80&w=24"
+	status, _, err := request.SockRequest("POST", endpoint, nil, daemonHost())
+	c.Assert(status, checker.Equals, http.StatusOK)
 	c.Assert(err, checker.IsNil)
 
 	dockerCmd(c, "stop", cID)
@@ -787,7 +781,7 @@ func (s *DockerSuite) TestEventsFormat(c *check.C) {
 func (s *DockerSuite) TestEventsFormatBadFunc(c *check.C) {
 	// make sure it fails immediately, without receiving any event
 	result := dockerCmdWithResult("events", "--format", "{{badFuncString .}}")
-	result.Assert(c, icmd.Expected{
+	c.Assert(result, icmd.Matches, icmd.Expected{
 		Error:    "exit status 64",
 		ExitCode: 64,
 		Err:      "Error parsing format: template: :1: function \"badFuncString\" not defined",
@@ -797,7 +791,7 @@ func (s *DockerSuite) TestEventsFormatBadFunc(c *check.C) {
 func (s *DockerSuite) TestEventsFormatBadField(c *check.C) {
 	// make sure it fails immediately, without receiving any event
 	result := dockerCmdWithResult("events", "--format", "{{.badFieldString}}")
-	result.Assert(c, icmd.Expected{
+	c.Assert(result, icmd.Matches, icmd.Expected{
 		Error:    "exit status 64",
 		ExitCode: 64,
 		Err:      "Error parsing format: template: :1:2: executing \"\" at <.badFieldString>: can't evaluate field badFieldString in type *events.Message",

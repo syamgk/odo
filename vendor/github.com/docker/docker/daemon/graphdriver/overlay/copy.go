@@ -121,7 +121,7 @@ func copyDir(srcDir, dstDir string, flags copyFlags) error {
 			}
 
 		default:
-			return fmt.Errorf("unknown file type for %s", srcPath)
+			return fmt.Errorf("Unknown file type for %s\n", srcPath)
 		}
 
 		// Everything below is copying metadata from src to dst. All this metadata

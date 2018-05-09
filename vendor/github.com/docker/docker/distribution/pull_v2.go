@@ -2,6 +2,7 @@ package distribution
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -29,7 +30,6 @@ import (
 	refstore "github.com/docker/docker/reference"
 	"github.com/docker/docker/registry"
 	"github.com/opencontainers/go-digest"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )
@@ -368,7 +368,7 @@ func (p *v2Puller) pullV2Tag(ctx context.Context, ref reference.Named) (tagUpdat
 			if configClass == "" {
 				configClass = "unknown"
 			}
-			return false, invalidManifestClassError{m.Manifest.Config.MediaType, configClass}
+			return false, fmt.Errorf("Encountered remote %q(%s) when fetching", m.Manifest.Config.MediaType, configClass)
 		}
 	}
 
@@ -404,7 +404,7 @@ func (p *v2Puller) pullV2Tag(ctx context.Context, ref reference.Named) (tagUpdat
 			return false, err
 		}
 	default:
-		return false, invalidManifestFormatError{}
+		return false, errors.New("unsupported manifest format")
 	}
 
 	progress.Message(p.config.ProgressOutput, "", "Digest: "+manifestDigest.String())
@@ -908,7 +908,7 @@ func fixManifestLayers(m *schema1.Manifest) error {
 			m.FSLayers = append(m.FSLayers[:i], m.FSLayers[i+1:]...)
 			m.History = append(m.History[:i], m.History[i+1:]...)
 		} else if imgs[i].Parent != imgs[i+1].ID {
-			return fmt.Errorf("invalid parent ID. Expected %v, got %v", imgs[i+1].ID, imgs[i].Parent)
+			return fmt.Errorf("Invalid parent ID. Expected %v, got %v.", imgs[i+1].ID, imgs[i].Parent)
 		}
 	}
 

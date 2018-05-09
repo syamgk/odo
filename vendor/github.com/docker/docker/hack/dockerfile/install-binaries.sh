@@ -20,7 +20,7 @@ RUNC_BUILDTAGS="${RUNC_BUILDTAGS:-"seccomp apparmor selinux"}"
 
 install_runc() {
 	echo "Install runc version $RUNC_COMMIT"
-	git clone https://github.com/opencontainers/runc.git "$GOPATH/src/github.com/opencontainers/runc"
+	git clone https://github.com/docker/runc.git "$GOPATH/src/github.com/opencontainers/runc"
 	cd "$GOPATH/src/github.com/opencontainers/runc"
 	git checkout -q "$RUNC_COMMIT"
 	make BUILDTAGS="$RUNC_BUILDTAGS" $1
@@ -54,15 +54,6 @@ install_dockercli() {
 	go build -o /usr/local/bin/docker github.com/docker/cli/cmd/docker
 }
 
-install_gometalinter() {
-	echo "Installing gometalinter version $GOMETALINTER_COMMIT"
-	go get -d github.com/alecthomas/gometalinter
-	cd "$GOPATH/src/github.com/alecthomas/gometalinter"
-	git checkout -q "$GOMETALINTER_COMMIT"
-	go build -o /usr/local/bin/gometalinter github.com/alecthomas/gometalinter
-	GOBIN=/usr/local/bin gometalinter --install
-}
-
 for prog in "$@"
 do
 	case $prog in
@@ -87,10 +78,6 @@ do
 
 		containerd-dynamic)
 			install_containerd
-			;;
-
-		gometalinter)
-			install_gometalinter
 			;;
 
 		tini)
@@ -127,7 +114,7 @@ do
 			;;
 
 		*)
-			echo echo "Usage: $0 [tomlv|runc|runc-dynamic|containerd|containerd-dynamic|tini|proxy|proxy-dynamic|vndr|dockercli|gometalinter]"
+			echo echo "Usage: $0 [tomlv|runc|runc-dynamic|containerd|containerd-dynamic|tini|proxy|proxy-dynamic|vndr|dockercli]"
 			exit 1
 
 	esac

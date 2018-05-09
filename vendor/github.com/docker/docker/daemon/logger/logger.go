@@ -8,6 +8,7 @@
 package logger
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -15,15 +16,8 @@ import (
 	"github.com/docker/docker/pkg/jsonlog"
 )
 
-// ErrReadLogsNotSupported is returned when the underlying log driver does not support reading
-type ErrReadLogsNotSupported struct{}
-
-func (ErrReadLogsNotSupported) Error() string {
-	return "configured logging driver does not support reading"
-}
-
-// NotImplemented makes this error implement the `NotImplemented` interface from api/errdefs
-func (ErrReadLogsNotSupported) NotImplemented() {}
+// ErrReadLogsNotSupported is returned when the logger does not support reading logs.
+var ErrReadLogsNotSupported = errors.New("configured logging driver does not support reading")
 
 const (
 	// TimeFormat is the time format used for timestamps sent to log readers.

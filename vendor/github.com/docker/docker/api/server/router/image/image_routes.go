@@ -3,6 +3,7 @@ package image
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"runtime"
@@ -19,7 +20,6 @@ import (
 	"github.com/docker/docker/pkg/streamformatter"
 	"github.com/docker/docker/pkg/system"
 	"github.com/docker/docker/registry"
-	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 )
 
@@ -161,20 +161,6 @@ func (s *imageRouter) postImagesCreate(ctx context.Context, w http.ResponseWrite
 	return nil
 }
 
-type validationError struct {
-	cause error
-}
-
-func (e validationError) Error() string {
-	return e.cause.Error()
-}
-
-func (e validationError) Cause() error {
-	return e.cause
-}
-
-func (validationError) InvalidParameter() {}
-
 func (s *imageRouter) postImagesPush(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
 	metaHeaders := map[string][]string{}
 	for k, v := range r.Header {
@@ -198,7 +184,7 @@ func (s *imageRouter) postImagesPush(ctx context.Context, w http.ResponseWriter,
 	} else {
 		// the old format is supported for compatibility if there was no authConfig header
 		if err := json.NewDecoder(r.Body).Decode(authConfig); err != nil {
-			return errors.Wrap(validationError{err}, "Bad parameters and missing X-Registry-Auth")
+			return fmt.Errorf("Bad parameters and missing X-Registry-Auth: %v", err)
 		}
 	}
 
@@ -260,14 +246,6 @@ func (s *imageRouter) postImagesLoad(ctx context.Context, w http.ResponseWriter,
 	return nil
 }
 
-type missingImageError struct{}
-
-func (missingImageError) Error() string {
-	return "image name cannot be blank"
-}
-
-func (missingImageError) InvalidParameter() {}
-
 func (s *imageRouter) deleteImages(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
 	if err := httputils.ParseForm(r); err != nil {
 		return err
@@ -276,7 +254,7 @@ func (s *imageRouter) deleteImages(ctx context.Context, w http.ResponseWriter, r
 	name := vars["name"]
 
 	if strings.TrimSpace(name) == "" {
-		return missingImageError{}
+		return fmt.Errorf("image name cannot be blank")
 	}
 
 	force := httputils.BoolValue(r, "force")

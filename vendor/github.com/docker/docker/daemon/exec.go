@@ -8,6 +8,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/docker/docker/api/errors"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/container"
@@ -17,7 +18,6 @@ import (
 	"github.com/docker/docker/pkg/pools"
 	"github.com/docker/docker/pkg/signal"
 	"github.com/docker/docker/pkg/term"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -81,7 +81,7 @@ func (d *Daemon) getActiveContainer(name string) (*container.Container, error) {
 	}
 
 	if !container.IsRunning() {
-		return nil, errNotRunning(container.ID)
+		return nil, errNotRunning{container.ID}
 	}
 	if container.IsPaused() {
 		return nil, errExecPaused(name)
@@ -157,12 +157,12 @@ func (d *Daemon) ContainerExecStart(ctx context.Context, name string, stdin io.R
 	if ec.ExitCode != nil {
 		ec.Unlock()
 		err := fmt.Errorf("Error: Exec command %s has already run", ec.ID)
-		return stateConflictError{err}
+		return errors.NewRequestConflictError(err)
 	}
 
 	if ec.Running {
 		ec.Unlock()
-		return stateConflictError{fmt.Errorf("Error: Exec command %s is already running", ec.ID)}
+		return fmt.Errorf("Error: Exec command %s is already running", ec.ID)
 	}
 	ec.Running = true
 	ec.Unlock()
@@ -233,7 +233,7 @@ func (d *Daemon) ContainerExecStart(ctx context.Context, name string, stdin io.R
 
 	systemPid, err := d.containerd.AddProcess(ctx, c.ID, name, p, ec.InitializeStdio)
 	if err != nil {
-		return translateContainerdStartErr(ec.Entrypoint, ec.SetExitCode, err)
+		return err
 	}
 	ec.Lock()
 	ec.Pid = systemPid
@@ -254,7 +254,7 @@ func (d *Daemon) ContainerExecStart(ctx context.Context, name string, stdin io.R
 	case err := <-attachErr:
 		if err != nil {
 			if _, ok := err.(term.EscapeError); !ok {
-				return errors.Wrap(systemError{err}, "exec attach failed")
+				return fmt.Errorf("exec attach failed with error: %v", err)
 			}
 			d.LogContainerEvent(c, "exec_detach")
 		}
