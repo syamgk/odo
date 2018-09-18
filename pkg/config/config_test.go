@@ -933,18 +933,21 @@ func TestSetConfiguration(t *testing.T) {
 	tests := []struct {
 		name           string
 		parameter      string
+		value          interface{}
 		existingConfig Config
-		want           bool
+		want           interface{}
 	}{
 		{
 			name:           "updatenotification set nil to true",
 			parameter:      "updatenotification",
+			value:          true,
 			existingConfig: Config{},
 			want:           true,
 		},
 		{
 			name:      "updatenotification set true to false",
 			parameter: "updatenotification",
+			value:     false,
 			existingConfig: Config{
 				OdoSettings: OdoSettings{
 					UpdateNotification: &trueValue,
@@ -955,12 +958,42 @@ func TestSetConfiguration(t *testing.T) {
 		{
 			name:      "updatenotification set false to true",
 			parameter: "updatenotification",
+			value:     true,
 			existingConfig: Config{
 				OdoSettings: OdoSettings{
 					UpdateNotification: &falseValue,
 				},
 			},
 			want: true,
+		},
+		{
+			name:      "Timeout set to 0",
+			parameter: "timeout",
+			value:     0,
+			existingConfig: Config{
+				OdoSettings: OdoSettings{
+					Timeout: 1,
+				},
+			},
+			want: 1,
+		},
+		{
+			name:      "Timeout set to 5 from 5",
+			parameter: "timeout",
+			value:     5,
+			existingConfig: Config{
+				OdoSettings: OdoSettings{
+					Timeout: 1,
+				},
+			},
+			want: 5,
+		},
+		{
+			name:           "Timeout set to 300",
+			parameter:      "timeout",
+			value:          300,
+			existingConfig: Config{},
+			want:           300,
 		},
 	}
 
@@ -972,11 +1005,21 @@ func TestSetConfiguration(t *testing.T) {
 			}
 			cfg.Config = tt.existingConfig
 
-			cfg.SetConfiguration(tt.parameter, tt.want)
+			cfg.SetConfiguration(tt.parameter, tt.value)
 
 			// validating the value after executing Serconfiguration
-			if *cfg.OdoSettings.UpdateNotification != tt.want {
-				t.Errorf("unexpeced value after execution of SetConfiguration expected \ngot: %t \nexpected: %t\n", *cfg.OdoSettings.UpdateNotification, tt.want)
+			// according to component
+			switch tt.parameter {
+			case "updatenotification":
+				if *cfg.OdoSettings.UpdateNotification != tt.want {
+					t.Errorf("unexpeced value after execution of SetConfiguration \ngot: %t \nexpected: %t\n", *cfg.OdoSettings.UpdateNotification, tt.want)
+				}
+			case "timeout":
+				if cfg.OdoSettings.Timeout != tt.want {
+					t.Errorf("unexpeced value after execution of SetConfiguration \ngot: %v \nexpected: %d\n", cfg.OdoSettings.Timeout, tt.want)
+				}
+			default:
+				t.Errorf("unexpeced parameter\n got: %s as parameter which is not found in the known list", tt.parameter)
 			}
 
 		})
@@ -1033,6 +1076,60 @@ func TestGetupdateNotification(t *testing.T) {
 
 			if output != tt.want {
 				t.Errorf("GetUpdateNotification returned unexpeced value expected \ngot: %t \nexpected: %t\n", output, tt.want)
+			}
+
+		})
+	}
+}
+
+func TestGetTimeout(t *testing.T) {
+
+	tempConfigFile, err := ioutil.TempFile("", "odoconfig")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tempConfigFile.Close()
+	os.Setenv(configEnvName, tempConfigFile.Name())
+
+	tests := []struct {
+		name           string
+		existingConfig Config
+		want           int
+	}{
+		{
+			name:           "updatenotification nil",
+			existingConfig: Config{},
+			want:           1,
+		},
+		{
+			name: "updatenotification true",
+			existingConfig: Config{
+				OdoSettings: OdoSettings{
+					Timeout: 1,
+				},
+			},
+			want: 1,
+		},
+		{
+			name: "updatenotification false",
+			existingConfig: Config{
+				OdoSettings: OdoSettings{
+					Timeout: 120,
+				},
+			},
+			want: 120,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := ConfigInfo{
+				Config: tt.existingConfig,
+			}
+			output := cfg.GetTimeout()
+
+			if output != tt.want {
+				t.Errorf("GetTimeout returned unexpeced value expected \ngot: %d \nexpected: %d\n", output, tt.want)
 			}
 
 		})

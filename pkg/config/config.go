@@ -20,6 +20,8 @@ const (
 type OdoSettings struct {
 	// Controls if an update notification is shown or not
 	UpdateNotification *bool `json:"updatenotification,omitempty"`
+	// Timeout for openshift server connection check
+	Timeout int `json:"timeout"`
 }
 
 // ApplicationInfo holds all important information about one application
@@ -130,19 +132,46 @@ func (c *ConfigInfo) writeToFile() error {
 }
 
 // SetConfiguration modifies Odo configurations in the config file
-// as of now only being used for updatenotification
-func (c *ConfigInfo) SetConfiguration(parameter string, value bool) error {
+// as of now being used for timeout, updatenotification
+func (c *ConfigInfo) SetConfiguration(parameter string, value interface{}) error {
 	switch parameter {
+
+	case "timeout":
+		typedval, ok := value.(int)
+		if typedval == 0 {
+			fmt.Println("Cannot set timeout to 0, minimum value is 1")
+			return errors.Errorf("type assertion error: unable to set")
+		}
+		if ok != true {
+			return errors.Errorf("type assertion error: unable to set %s", parameter)
+		}
+		c.OdoSettings.Timeout = typedval
+
 	case "updatenotification":
-		c.OdoSettings.UpdateNotification = &value
+		typedval, ok := value.(bool)
+		if ok != true {
+			return errors.Errorf("type assertion error: unable to set %s", parameter)
+		}
+		c.OdoSettings.UpdateNotification = &typedval
+
 	default:
 		return errors.Errorf("unknown parameter :'%s' is not a parameter in odo config", parameter)
 	}
+
 	err := c.writeToFile()
 	if err != nil {
 		return errors.Wrapf(err, "unable to set %s", parameter)
 	}
 	return nil
+}
+
+// GetTimeout returns the value of Timeout from config
+func (c *ConfigInfo) GetTimeout() int {
+	// minimum timeout value is 1
+	if c.OdoSettings.Timeout == 0 {
+		return 1
+	}
+	return c.OdoSettings.Timeout
 }
 
 // GetupdateNotification returns the value of UpdateNotification from config

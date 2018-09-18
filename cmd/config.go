@@ -7,7 +7,6 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/pkg/errors"
 	"github.com/redhat-developer/odo/pkg/config"
 	"github.com/spf13/cobra"
 )
@@ -19,7 +18,8 @@ var configurationCmd = &cobra.Command{
 	Long: `Modifies Odo specific configuration settings within the config file.
 
 Available Parameters:
-UpdateNotification - Controls if an update notification is shown or not (true or false)`,
+UpdateNotification - Controls if an update notification is shown or not (true or false),
+Timeout            - timeout(in seconds) for openshift server connection check(minimum value is 1second)`,
 	Example: fmt.Sprintf("%s\n%s\n",
 		configurationViewCmd.Example,
 		configurationSetCmd.Example),
@@ -46,10 +46,14 @@ var configurationSetCmd = &cobra.Command{
 	Short: "Set a value in odo config file",
 	Long: `Set an individual value in the Odo configuration file 
 Available Parameters:
-UpdateNotification - Controls if an update notification is shown or not (true or false)`,
+UpdateNotification - Controls if an update notification is shown or not (true or false)
+Timeout            - timeout(in seconds) for openshift server connection check`,
 	Example: `
-   # Set a configuration value
+   # Set UpdateNotification off
    odo utils config set UpdateNotification false
+
+   # Set openshift server connection check to 20seconds
+   odo utils config set timeout 20
 	`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 2 {
@@ -59,16 +63,22 @@ UpdateNotification - Controls if an update notification is shown or not (true or
 		} else {
 			return nil
 		}
-	}, RunE: func(cmd *cobra.Command, args []string) error {
+	}, Run: func(cmd *cobra.Command, args []string) {
 		cfg, err := config.New()
-		if err != nil {
-			return errors.Wrapf(err, "unable to set configuration")
+		checkError(err, "unable to set configuration")
+		switch strings.ToLower(args[0]) {
+		case "updatenotification":
+			value, err := strconv.ParseBool(args[1])
+			checkError(err, "unable to set configuration")
+			cfg.SetConfiguration(strings.ToLower(args[0]), value)
+		case "timeout":
+			value, err := strconv.Atoi(args[1])
+			checkError(err, "unable to set configuration")
+			cfg.SetConfiguration(strings.ToLower(args[0]), value)
+		default:
+			fmt.Printf("'%s' is not a parameter in odo config\nRun `odo utils config --help` for usage\n", args[0])
+			os.Exit(1)
 		}
-		value, err := strconv.ParseBool(args[1])
-		if err != nil {
-			return errors.Wrapf(err, "unable to set configuration")
-		}
-		return cfg.SetConfiguration(strings.ToLower(args[0]), value)
 	},
 }
 
@@ -88,6 +98,7 @@ var configurationViewCmd = &cobra.Command{
 		w := tabwriter.NewWriter(os.Stdout, 5, 2, 2, ' ', tabwriter.TabIndent)
 		fmt.Fprintln(w, "PARAMETER", "\t", "CURRENT_VALUE")
 		fmt.Fprintln(w, "UpdateNotification", "\t", cfg.GetUpdateNotification())
+		fmt.Fprintln(w, "Timeout", "\t", cfg.GetTimeout())
 		w.Flush()
 	},
 }

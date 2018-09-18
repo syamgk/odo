@@ -86,6 +86,10 @@ var _ = Describe("odoe2e", func() {
 			Expect(config).To(ContainSubstring("true"))
 			Expect(config).To(ContainSubstring("UpdateNotification"))
 		})
+		It("should get 1 for timeout by default", func() {
+			config := runCmd("odo utils config view|grep Timeout")
+			Expect(config).To(ContainSubstring("1"))
+		})
 	})
 
 	Context("creating component without an application", func() {
