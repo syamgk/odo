@@ -19,7 +19,8 @@ var configurationCmd = &cobra.Command{
 
 Available Parameters:
 UpdateNotification - Controls if an update notification is shown or not (true or false)
-NamePrefix - Default prefix is the current directory name. Use this value to set a default name prefix`,
+NamePrefix - Default prefix is the current directory name. Use this value to set a default name prefix
+Timeout - Timeout (in seconds) for openshift server connection check`,
 	Example: fmt.Sprintf("%s\n%s\n",
 		configurationViewCmd.Example,
 		configurationSetCmd.Example),
@@ -27,7 +28,7 @@ NamePrefix - Default prefix is the current directory name. Use this value to set
 	// 'odo utils config' is the same as 'odo utils config --help'
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) >= 1 && args[0] != "view" && args[0] != "set" {
-			return fmt.Errorf("Unknown command, use set or view")
+			return fmt.Errorf(`Unknown command, use "set" or "view"`)
 		}
 		return nil
 	}, Run: func(cmd *cobra.Command, args []string) {
@@ -47,21 +48,27 @@ var configurationSetCmd = &cobra.Command{
 	Long: `Set an individual value in the Odo configuration file
 Available Parameters:
 UpdateNotification - Controls if an update notification is shown or not (true or false)
-NamePrefix - Default prefix is the current directory name. Use this value to set a default name prefix.`,
+NamePrefix - Default prefix is the current directory name. Use this value to set a default name prefix.
+Timeout - Timeout(in seconds) for openshift server connection check`,
 	Example: `
-   # Set a configuration value
-   odo utils config set UpdateNotification false
-   odo utils config set NamePrefix ""
-   odo utils config set NamePrefix "app"
+	# For viewing the current configuration
+	odo utils config view
+
+	# Set a configuration value
+	odo utils config set UpdateNotification false
+	odo utils config set NamePrefix ""
+	odo utils config set NamePrefix "app"
+	odo utils config set timeout 20
+	odo utils config set timeout 0
 	`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 2 {
 			return fmt.Errorf("Please provide a parameter name and value")
 		} else if len(args) > 2 {
 			return fmt.Errorf("Only one value per parameter is allowed")
-		} else {
-			return nil
 		}
+		return nil
+
 	}, RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.New()
 		if err != nil {
@@ -76,8 +83,8 @@ var configurationViewCmd = &cobra.Command{
 	Short: "View current configuration values",
 	Long:  "View current configuration values",
 	Example: `
-   # For viewing the current configuration
-   odo utils config view`,
+  # For viewing the current configuration
+  odo utils config view`,
 	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg, err := config.New()
@@ -88,6 +95,7 @@ var configurationViewCmd = &cobra.Command{
 		fmt.Fprintln(w, "PARAMETER", "\t", "CURRENT_VALUE")
 		fmt.Fprintln(w, "UpdateNotification", "\t", cfg.GetUpdateNotification())
 		fmt.Fprintln(w, "NamePrefix", "\t", cfg.GetNamePrefix())
+		fmt.Fprintln(w, "Timeout", "\t", cfg.GetTimeout())
 		w.Flush()
 	},
 }
