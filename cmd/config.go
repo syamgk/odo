@@ -49,11 +49,11 @@ Available Parameters:
 UpdateNotification - Controls if an update notification is shown or not (true or false)
 Timeout            - timeout(in seconds) for openshift server connection check`,
 	Example: `
-   # Set UpdateNotification off
-   odo utils config set UpdateNotification false
+  # Set UpdateNotification off
+  odo utils config set UpdateNotification false
 
-   # Set openshift server connection check to 20seconds
-   odo utils config set timeout 20
+  # Set openshift server connection check to 20seconds
+  odo utils config set timeout 20
 	`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 2 {
@@ -70,11 +70,13 @@ Timeout            - timeout(in seconds) for openshift server connection check`,
 		case "updatenotification":
 			value, err := strconv.ParseBool(args[1])
 			checkError(err, "unable to set configuration")
-			cfg.SetConfiguration(strings.ToLower(args[0]), value)
+			err = cfg.SetConfiguration(strings.ToLower(args[0]), value)
+			checkError(err, "")
 		case "timeout":
 			value, err := strconv.Atoi(args[1])
-			checkError(err, "unable to set configuration")
-			cfg.SetConfiguration(strings.ToLower(args[0]), value)
+			checkError(err, "")
+			err = cfg.SetConfiguration(strings.ToLower(args[0]), value)
+			checkError(err, "")
 		default:
 			fmt.Printf("'%s' is not a parameter in odo config\nRun `odo utils config --help` for usage\n", args[0])
 			os.Exit(1)
@@ -87,8 +89,8 @@ var configurationViewCmd = &cobra.Command{
 	Short: "View current configuration values",
 	Long:  "View current configuration values",
 	Example: `
-   # For viewing the current configuration
-   odo utils config view`,
+  # For viewing the current configuration
+  odo utils config view`,
 	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg, err := config.New()

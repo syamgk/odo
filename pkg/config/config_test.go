@@ -1005,21 +1005,26 @@ func TestSetConfiguration(t *testing.T) {
 			}
 			cfg.Config = tt.existingConfig
 
-			cfg.SetConfiguration(tt.parameter, tt.value)
+			err = cfg.SetConfiguration(tt.parameter, tt.value)
 
-			// validating the value after executing Serconfiguration
-			// according to component
-			switch tt.parameter {
-			case "updatenotification":
-				if *cfg.OdoSettings.UpdateNotification != tt.want {
-					t.Errorf("unexpeced value after execution of SetConfiguration \ngot: %t \nexpected: %t\n", *cfg.OdoSettings.UpdateNotification, tt.want)
+			if err == nil {
+				// validating the value after executing Serconfiguration
+				// according to component
+				switch tt.parameter {
+				case "updatenotification":
+					if *cfg.OdoSettings.UpdateNotification != tt.want {
+						t.Errorf("unexpeced value after execution of SetConfiguration \ngot: %t \nexpected: %t\n", *cfg.OdoSettings.UpdateNotification, tt.want)
+					}
+				case "timeout":
+					if cfg.OdoSettings.Timeout != tt.want {
+						t.Errorf("unexpeced value after execution of SetConfiguration \ngot: %v \nexpected: %d\n", cfg.OdoSettings.Timeout, tt.want)
+					}
+				default:
+					t.Errorf("unexpeced parameter\n got: %s as parameter which is not found in the known list", tt.parameter)
 				}
-			case "timeout":
-				if cfg.OdoSettings.Timeout != tt.want {
-					t.Errorf("unexpeced value after execution of SetConfiguration \ngot: %v \nexpected: %d\n", cfg.OdoSettings.Timeout, tt.want)
-				}
-			default:
-				t.Errorf("unexpeced parameter\n got: %s as parameter which is not found in the known list", tt.parameter)
+			} else if err != nil && (tt.parameter == "timeout" && tt.value == 0) {
+			} else {
+				t.Error(err)
 			}
 
 		})

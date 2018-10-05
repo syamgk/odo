@@ -138,18 +138,17 @@ func (c *ConfigInfo) SetConfiguration(parameter string, value interface{}) error
 
 	case "timeout":
 		typedval, ok := value.(int)
-		if typedval == 0 {
-			fmt.Println("Cannot set timeout to 0, minimum value is 1")
-			return errors.Errorf("type assertion error: unable to set")
-		}
-		if ok != true {
+		if !ok {
 			return errors.Errorf("type assertion error: unable to set %s", parameter)
+		}
+		if typedval == 0 {
+			return errors.Errorf("cannot set timeout to 0, minimum value is 1")
 		}
 		c.OdoSettings.Timeout = typedval
 
 	case "updatenotification":
 		typedval, ok := value.(bool)
-		if ok != true {
+		if !ok {
 			return errors.Errorf("type assertion error: unable to set %s", parameter)
 		}
 		c.OdoSettings.UpdateNotification = &typedval
@@ -167,7 +166,7 @@ func (c *ConfigInfo) SetConfiguration(parameter string, value interface{}) error
 
 // GetTimeout returns the value of Timeout from config
 func (c *ConfigInfo) GetTimeout() int {
-	// minimum timeout value is 1
+	// default timeout value is 1
 	if c.OdoSettings.Timeout == 0 {
 		return 1
 	}
