@@ -14,6 +14,8 @@ import (
 const (
 	configEnvName  = "ODOCONFIG"
 	configFileName = "odo"
+	//defaultTimeout for openshift server connection check
+	defaultTimeout = 1
 )
 
 // OdoSettings holds all odo specific configurations
@@ -168,7 +170,7 @@ func (c *ConfigInfo) SetConfiguration(parameter string, value interface{}) error
 func (c *ConfigInfo) GetTimeout() int {
 	// default timeout value is 1
 	if c.OdoSettings.Timeout == 0 {
-		return 1
+		return defaultTimeout
 	}
 	return c.OdoSettings.Timeout
 }
