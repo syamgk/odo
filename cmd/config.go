@@ -19,7 +19,7 @@ var configurationCmd = &cobra.Command{
 
 Available Parameters:
 UpdateNotification - Controls if an update notification is shown or not (true or false),
-Timeout            - Timeout(in seconds) for openshift server connection check(minimum value is 1 second)`,
+Timeout            - Timeout (in seconds) for openshift server connection check (minimum value is 1 second)`,
 	Example: fmt.Sprintf("%s\n%s\n",
 		configurationViewCmd.Example,
 		configurationSetCmd.Example),
@@ -47,12 +47,12 @@ var configurationSetCmd = &cobra.Command{
 	Long: `Set an individual value in the Odo configuration file 
 Available Parameters:
 UpdateNotification - Controls if an update notification is shown or not (true or false)
-Timeout            - Timeout(in seconds) for openshift server connection check`,
+Timeout            - Timeout (in seconds) for openshift server connection check`,
 	Example: `
   # Set UpdateNotification off
   odo utils config set UpdateNotification false
 
-  # Set openshift server connection check to 20 seconds
+  # Set OpenShift server connection check to 20 seconds
   odo utils config set timeout 20
 	`,
 	Args: func(cmd *cobra.Command, args []string) error {
