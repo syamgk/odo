@@ -143,8 +143,8 @@ func (c *ConfigInfo) SetConfiguration(parameter string, value interface{}) error
 		if !ok {
 			return errors.Errorf("type assertion error: unable to set %s", parameter)
 		}
-		if typedval == 0 {
-			return errors.Errorf("cannot set timeout to 0, minimum value is 1")
+		if typedval <= 0 {
+			return errors.Errorf("cannot set timeout to less than 1 second")
 		}
 		c.OdoSettings.Timeout = typedval
 
