@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"fmt"
+	"github.com/redhat-developer/odo/pkg/config"
 	"io/ioutil"
 	"log"
 	"strings"
@@ -86,9 +87,9 @@ var _ = Describe("odoe2e", func() {
 			Expect(config).To(ContainSubstring("true"))
 			Expect(config).To(ContainSubstring("UpdateNotification"))
 		})
-		It("should get 1 for timeout by default", func() {
+		It("should be checking to see if timeout is the same as the constant", func() {
 			config := runCmd("odo utils config view|grep Timeout")
-			Expect(config).To(ContainSubstring("1"))
+			Expect(config).To(ContainSubstring(fmt.Sprintf("%d", config.defaultTimeout)))
 		})
 	})
 
