@@ -27,7 +27,7 @@ Timeout            - Timeout (in seconds) for openshift server connection check 
 	// 'odo utils config' is the same as 'odo utils config --help'
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) >= 1 && args[0] != "view" && args[0] != "set" {
-			return fmt.Errorf("Unknown command, use set or view")
+			return fmt.Errorf("Unknown command, use \"set\" or \"view\"")
 		}
 		return nil
 	}, Run: func(cmd *cobra.Command, args []string) {
@@ -57,12 +57,12 @@ Timeout            - Timeout (in seconds) for openshift server connection check`
 	`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 2 {
-			return fmt.Errorf("Please provide a parameter name and value")
+			checkError(fmt.Errorf("Please provide a parameter name and value"), "")
 		} else if len(args) > 2 {
-			return fmt.Errorf("Only one value per parameter is allowed")
-		} else {
-			return nil
+			checkError(fmt.Errorf("Only one value per parameter is allowed"), "")
 		}
+		return nil
+
 	}, Run: func(cmd *cobra.Command, args []string) {
 		cfg, err := config.New()
 		checkError(err, "unable to set configuration")
