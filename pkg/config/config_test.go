@@ -1037,7 +1037,7 @@ func TestSetConfiguration(t *testing.T) {
 
 			err = cfg.SetConfiguration(tt.parameter, tt.value)
 
-			if tt.wantErr == false && err == nil {
+			if !tt.wantErr && err == nil {
 				// validating the value after executing Serconfiguration
 				// according to component in positive cases
 				switch tt.parameter {
@@ -1050,13 +1050,15 @@ func TestSetConfiguration(t *testing.T) {
 						t.Errorf("unexpeced value after execution of SetConfiguration \ngot: %v \nexpected: %d\n", cfg.OdoSettings.Timeout, tt.want)
 					}
 				}
-			} else if tt.wantErr == true && err != nil {
+			} else if tt.wantErr && err != nil {
 				// negative cases
 				switch tt.parameter {
 				case "updatenotification":
 				case "timeout":
 					typedval, ok := tt.value.(int)
 					if typedval <= 0 || !ok {
+					} else {
+						t.Error(err)
 					}
 				}
 			} else {
