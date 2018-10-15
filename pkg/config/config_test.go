@@ -936,13 +936,16 @@ func TestSetConfiguration(t *testing.T) {
 		value          interface{}
 		existingConfig Config
 		want           interface{}
+		wantErr        bool
 	}{
+		// updatenotification
 		{
 			name:           "updatenotification set nil to true",
 			parameter:      "updatenotification",
 			value:          true,
 			existingConfig: Config{},
 			want:           true,
+			wantErr:        false,
 		},
 		{
 			name:      "updatenotification set true to false",
@@ -953,7 +956,8 @@ func TestSetConfiguration(t *testing.T) {
 					UpdateNotification: &trueValue,
 				},
 			},
-			want: false,
+			want:    false,
+			wantErr: false,
 		},
 		{
 			name:      "updatenotification set false to true",
@@ -964,7 +968,38 @@ func TestSetConfiguration(t *testing.T) {
 					UpdateNotification: &falseValue,
 				},
 			},
-			want: true,
+			want:    true,
+			wantErr: false,
+		},
+
+		{
+			name:           "updatenotification invalid value",
+			parameter:      "updatenotification",
+			value:          "invalid_value",
+			existingConfig: Config{},
+			wantErr:        true,
+		},
+
+		// timeout
+		{
+			name:      "Timeout set to 5 from 1",
+			parameter: "timeout",
+			value:     5,
+			existingConfig: Config{
+				OdoSettings: OdoSettings{
+					Timeout: 1,
+				},
+			},
+			want:    5,
+			wantErr: false,
+		},
+		{
+			name:           "Timeout set to 300",
+			parameter:      "timeout",
+			value:          300,
+			existingConfig: Config{},
+			want:           300,
+			wantErr:        false,
 		},
 		{
 			name:      "Timeout set to 0",
@@ -975,28 +1010,23 @@ func TestSetConfiguration(t *testing.T) {
 					Timeout: 1,
 				},
 			},
-			want: 1,
+			wantErr: true,
 		},
 		{
-			name:      "Timeout set to 5 from 5",
-			parameter: "timeout",
-			value:     5,
-			existingConfig: Config{
-				OdoSettings: OdoSettings{
-					Timeout: 1,
-				},
-			},
-			want: 5,
-		},
-		{
-			name:           "Timeout set to 300",
+			name:           "Timeout invalid value",
 			parameter:      "timeout",
-			value:          300,
+			value:          "this",
 			existingConfig: Config{},
-			want:           300,
+			wantErr:        true,
+		},
+		// invalid parameter
+		{
+			name:           "invalid parameter",
+			parameter:      "invalid_parameter",
+			existingConfig: Config{},
+			wantErr:        true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg, err := New()
@@ -1007,9 +1037,9 @@ func TestSetConfiguration(t *testing.T) {
 
 			err = cfg.SetConfiguration(tt.parameter, tt.value)
 
-			if err == nil {
+			if tt.wantErr == false && err == nil {
 				// validating the value after executing Serconfiguration
-				// according to component
+				// according to component in positive cases
 				switch tt.parameter {
 				case "updatenotification":
 					if *cfg.OdoSettings.UpdateNotification != tt.want {
@@ -1019,10 +1049,16 @@ func TestSetConfiguration(t *testing.T) {
 					if cfg.OdoSettings.Timeout != tt.want {
 						t.Errorf("unexpeced value after execution of SetConfiguration \ngot: %v \nexpected: %d\n", cfg.OdoSettings.Timeout, tt.want)
 					}
-				default:
-					t.Errorf("unexpeced parameter\n got: %s as parameter which is not found in the known list", tt.parameter)
 				}
-			} else if err != nil && (tt.parameter == "timeout" && tt.value == 0) {
+			} else if tt.wantErr == true && err != nil {
+				// negative cases
+				switch tt.parameter {
+				case "updatenotification":
+				case "timeout":
+					typedval, ok := tt.value.(int)
+					if typedval <= 0 || !ok {
+					}
+				}
 			} else {
 				t.Error(err)
 			}
