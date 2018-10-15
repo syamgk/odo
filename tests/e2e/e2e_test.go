@@ -83,13 +83,13 @@ var _ = Describe("odoe2e", func() {
 
 	Context("odo utils config", func() {
 		It("should get true for updatenotification by defult", func() {
-			config := runCmd("odo utils config view")
-			Expect(config).To(ContainSubstring("true"))
-			Expect(config).To(ContainSubstring("UpdateNotification"))
+			config_output := runCmd("odo utils config view")
+			Expect(config_output).To(ContainSubstring("true"))
+			Expect(config_output).To(ContainSubstring("UpdateNotification"))
 		})
 		It("should be checking to see if timeout is the same as the constant", func() {
-			config := runCmd("odo utils config view|grep Timeout")
-			Expect(config).To(ContainSubstring(fmt.Sprintf("%d", config.defaultTimeout)))
+			config_output := runCmd("odo utils config view|grep Timeout")
+			Expect(config_output).To(ContainSubstring(fmt.Sprintf("%d", config.DefaultTimeout)))
 		})
 	})
 
