@@ -1010,7 +1010,15 @@ func TestSetConfiguration(t *testing.T) {
 					Timeout: 1,
 				},
 			},
-			wantErr: true,
+			want:    0,
+			wantErr: false,
+		},
+		{
+			name:           "Timeout set to -1",
+			parameter:      "timeout",
+			value:          -1,
+			existingConfig: Config{},
+			wantErr:        true,
 		},
 		{
 			name:           "Timeout invalid value",

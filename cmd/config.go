@@ -19,7 +19,7 @@ var configurationCmd = &cobra.Command{
 
 Available Parameters:
 UpdateNotification - Controls if an update notification is shown or not (true or false),
-Timeout            - Timeout (in seconds) for openshift server connection check (minimum value is 1 second)`,
+Timeout            - Timeout (in seconds) for openshift server connection check, A value of zero means don't timeout requests`,
 	Example: fmt.Sprintf("%s\n%s\n",
 		configurationViewCmd.Example,
 		configurationSetCmd.Example),
