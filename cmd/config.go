@@ -19,7 +19,7 @@ var configurationCmd = &cobra.Command{
 
 Available Parameters:
 UpdateNotification - Controls if an update notification is shown or not (true or false),
-Timeout            - Timeout (in seconds) for openshift server connection check, A value of zero means don't timeout requests`,
+Timeout            - Timeout (in seconds) for OpenShift server connection check`,
 	Example: fmt.Sprintf("%s\n%s\n",
 		configurationViewCmd.Example,
 		configurationSetCmd.Example),
@@ -27,7 +27,7 @@ Timeout            - Timeout (in seconds) for openshift server connection check,
 	// 'odo utils config' is the same as 'odo utils config --help'
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) >= 1 && args[0] != "view" && args[0] != "set" {
-			return fmt.Errorf("Unknown command, use \"set\" or \"view\"")
+			return fmt.Errorf(`Unknown command, use "set" or "view"`)
 		}
 		return nil
 	}, Run: func(cmd *cobra.Command, args []string) {
@@ -47,13 +47,16 @@ var configurationSetCmd = &cobra.Command{
 	Long: `Set an individual value in the Odo configuration file 
 Available Parameters:
 UpdateNotification - Controls if an update notification is shown or not (true or false)
-Timeout            - Timeout (in seconds) for openshift server connection check`,
+Timeout            - Timeout (in seconds) for OpenShift server connection check`,
 	Example: `
   # Set UpdateNotification off
   odo utils config set UpdateNotification false
 
   # Set OpenShift server connection check to 20 seconds
   odo utils config set timeout 20
+
+  # Set 0 to don't timeout requests for OpenShift server check
+  odo utils config set timeout 0
 	`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 2 {
