@@ -60,9 +60,9 @@ Timeout            - Timeout (in seconds) for OpenShift server connection check`
 	`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 2 {
-			checkError(fmt.Errorf("Please provide a parameter name and value"), "")
+			return fmt.Errorf("Please provide a parameter name and value")
 		} else if len(args) > 2 {
-			checkError(fmt.Errorf("Only one value per parameter is allowed"), "")
+			return fmt.Errorf("Only one value per parameter is allowed")
 		}
 		return nil
 

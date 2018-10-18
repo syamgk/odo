@@ -1064,8 +1064,8 @@ func TestSetConfiguration(t *testing.T) {
 				case "updatenotification":
 				case "timeout":
 					typedval, ok := tt.value.(int)
-					if typedval <= 0 || !ok {
-					} else {
+					// if err is found in cases other than value <0 or !ok
+					if !(typedval <= 0 || !ok) {
 						t.Error(err)
 					}
 				}

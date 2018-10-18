@@ -57,7 +57,6 @@ import (
 )
 
 const (
-	ocRequestTimeout   = 1 * time.Second
 	OpenShiftNameSpace = "openshift"
 
 	// The length of the string to be generated for names of resources
@@ -262,17 +261,17 @@ func isServerUp(server string) bool {
 		return false
 	}
 
-	timeout := ocRequestTimeout
+	ocRequestTimeout := config.DefaultTimeout * time.Second
 	// checking the value of timeout in config
 	// before proceeding with default timeout
 	cfg, configReadErr := config.New()
 	if configReadErr != nil {
 		glog.V(4).Info(errors.Wrap(configReadErr, "unable to read config file"))
 	} else {
-		timeout = time.Duration(cfg.GetTimeout()) * time.Second
+		ocRequestTimeout = time.Duration(cfg.GetTimeout()) * time.Second
 	}
 	glog.V(4).Infof("Trying to connect to server %v", u.Host)
-	_, connectionError := net.DialTimeout("tcp", u.Host, time.Duration(timeout))
+	_, connectionError := net.DialTimeout("tcp", u.Host, time.Duration(ocRequestTimeout))
 	if connectionError != nil {
 		glog.V(4).Info(errors.Wrap(connectionError, "unable to connect to server"))
 		return false

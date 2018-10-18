@@ -175,7 +175,7 @@ func (c *ConfigInfo) GetTimeout() int {
 	return c.OdoSettings.Timeout
 }
 
-// GetupdateNotification returns the value of UpdateNotification from config
+// GetUpdateNotification returns the value of UpdateNotification from config
 func (c *ConfigInfo) GetUpdateNotification() bool {
 	if c.OdoSettings.UpdateNotification == nil {
 		return true
