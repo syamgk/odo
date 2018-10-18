@@ -91,6 +91,15 @@ var _ = Describe("odoe2e", func() {
 			config_output := runCmd("odo utils config view|grep Timeout")
 			Expect(config_output).To(ContainSubstring(fmt.Sprintf("%d", config.DefaultTimeout)))
 		})
+		It("should be checking to see if config values are the same as the configured ones", func() {
+			runCmd("odo utils config set updatenotification false")
+			runCmd("odo utils config set timeout 5")
+			config_output := runCmd("odo utils config view|grep UpdateNotification")
+			Expect(config_output).To(ContainSubstring("true"))
+			Expect(config_output).To(ContainSubstring("UpdateNotification"))
+			config_output = runCmd("odo utils config view|grep Timeout")
+			Expect(config_output).To(ContainSubstring("5"))
+		})
 	})
 
 	Context("creating component without an application", func() {
