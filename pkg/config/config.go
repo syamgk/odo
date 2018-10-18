@@ -23,7 +23,7 @@ type OdoSettings struct {
 	// Controls if an update notification is shown or not
 	UpdateNotification *bool `json:"updatenotification,omitempty"`
 	// Timeout for openshift server connection check
-	Timeout int `json:"timeout"`
+	Timeout *int `json:"timeout,omitempty"`
 }
 
 // ApplicationInfo holds all important information about one application
@@ -146,7 +146,7 @@ func (c *ConfigInfo) SetConfiguration(parameter string, value interface{}) error
 		if typedval < 0 {
 			return errors.Errorf("cannot set timeout to less than 0")
 		}
-		c.OdoSettings.Timeout = typedval
+		c.OdoSettings.Timeout = &typedval
 
 	case "updatenotification":
 		typedval, ok := value.(bool)
@@ -169,10 +169,10 @@ func (c *ConfigInfo) SetConfiguration(parameter string, value interface{}) error
 // GetTimeout returns the value of Timeout from config
 func (c *ConfigInfo) GetTimeout() int {
 	// default timeout value is 1
-	if c.OdoSettings.Timeout == 0 {
+	if c.OdoSettings.Timeout == nil {
 		return DefaultTimeout
 	}
-	return c.OdoSettings.Timeout
+	return *c.OdoSettings.Timeout
 }
 
 // GetUpdateNotification returns the value of UpdateNotification from config

@@ -919,6 +919,62 @@ func TestDeleteApplication(t *testing.T) {
 	}
 }
 
+func TestGetTimeout(t *testing.T) {
+	tempConfigFile, err := ioutil.TempFile("", "odoconfig")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tempConfigFile.Close()
+	os.Setenv(configEnvName, tempConfigFile.Name())
+	zeroValue := 0
+	nonzeroValue := 5
+	tests := []struct {
+		name           string
+		existingConfig Config
+		want           int
+	}{
+		{
+			name:           "validating value 1 from config in default case",
+			existingConfig: Config{},
+			want:           1,
+		},
+
+		{
+			name: "validating value 0 from config",
+			existingConfig: Config{
+				OdoSettings: OdoSettings{
+					Timeout: &zeroValue,
+				},
+			},
+			want: 0,
+		},
+
+		{
+			name: "validating value 5 from config",
+			existingConfig: Config{
+				OdoSettings: OdoSettings{
+					Timeout: &nonzeroValue,
+				},
+			},
+			want: 5,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, err := New()
+			if err != nil {
+				t.Error(err)
+			}
+			cfg.Config = tt.existingConfig
+
+			output := cfg.GetTimeout()
+			if output != tt.want {
+				t.Errorf("GetTimeout returned unexpeced value expected \ngot: %d \nexpected: %d\n", output, tt.want)
+			}
+		})
+	}
+}
+
 func TestSetConfiguration(t *testing.T) {
 
 	tempConfigFile, err := ioutil.TempFile("", "odoconfig")
@@ -929,6 +985,7 @@ func TestSetConfiguration(t *testing.T) {
 	os.Setenv(configEnvName, tempConfigFile.Name())
 	trueValue := true
 	falseValue := false
+	zeroValue := 0
 
 	tests := []struct {
 		name           string
@@ -982,12 +1039,12 @@ func TestSetConfiguration(t *testing.T) {
 
 		// timeout
 		{
-			name:      "Timeout set to 5 from 1",
+			name:      "Timeout set to 5 from 0",
 			parameter: "timeout",
 			value:     5,
 			existingConfig: Config{
 				OdoSettings: OdoSettings{
-					Timeout: 1,
+					Timeout: &zeroValue,
 				},
 			},
 			want:    5,
@@ -1002,16 +1059,12 @@ func TestSetConfiguration(t *testing.T) {
 			wantErr:        false,
 		},
 		{
-			name:      "Timeout set to 0",
-			parameter: "timeout",
-			value:     0,
-			existingConfig: Config{
-				OdoSettings: OdoSettings{
-					Timeout: 1,
-				},
-			},
-			want:    0,
-			wantErr: false,
+			name:           "Timeout set to 0",
+			parameter:      "timeout",
+			value:          0,
+			existingConfig: Config{},
+			want:           0,
+			wantErr:        false,
 		},
 		{
 			name:           "Timeout set to -1",
@@ -1054,7 +1107,7 @@ func TestSetConfiguration(t *testing.T) {
 						t.Errorf("unexpeced value after execution of SetConfiguration \ngot: %t \nexpected: %t\n", *cfg.OdoSettings.UpdateNotification, tt.want)
 					}
 				case "timeout":
-					if cfg.OdoSettings.Timeout != tt.want {
+					if *cfg.OdoSettings.Timeout != tt.want {
 						t.Errorf("unexpeced value after execution of SetConfiguration \ngot: %v \nexpected: %d\n", cfg.OdoSettings.Timeout, tt.want)
 					}
 				}
@@ -1065,7 +1118,7 @@ func TestSetConfiguration(t *testing.T) {
 				case "timeout":
 					typedval, ok := tt.value.(int)
 					// if err is found in cases other than value <0 or !ok
-					if !(typedval <= 0 || !ok) {
+					if !(typedval < 0 || !ok) {
 						t.Error(err)
 					}
 				}
@@ -1127,60 +1180,6 @@ func TestGetupdateNotification(t *testing.T) {
 
 			if output != tt.want {
 				t.Errorf("GetUpdateNotification returned unexpeced value expected \ngot: %t \nexpected: %t\n", output, tt.want)
-			}
-
-		})
-	}
-}
-
-func TestGetTimeout(t *testing.T) {
-
-	tempConfigFile, err := ioutil.TempFile("", "odoconfig")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer tempConfigFile.Close()
-	os.Setenv(configEnvName, tempConfigFile.Name())
-
-	tests := []struct {
-		name           string
-		existingConfig Config
-		want           int
-	}{
-		{
-			name:           "updatenotification nil",
-			existingConfig: Config{},
-			want:           1,
-		},
-		{
-			name: "updatenotification true",
-			existingConfig: Config{
-				OdoSettings: OdoSettings{
-					Timeout: 1,
-				},
-			},
-			want: 1,
-		},
-		{
-			name: "updatenotification false",
-			existingConfig: Config{
-				OdoSettings: OdoSettings{
-					Timeout: 120,
-				},
-			},
-			want: 120,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cfg := ConfigInfo{
-				Config: tt.existingConfig,
-			}
-			output := cfg.GetTimeout()
-
-			if output != tt.want {
-				t.Errorf("GetTimeout returned unexpeced value expected \ngot: %d \nexpected: %d\n", output, tt.want)
 			}
 
 		})
