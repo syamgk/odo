@@ -95,7 +95,7 @@ var _ = Describe("odoe2e", func() {
 			runCmd("odo utils config set updatenotification false")
 			runCmd("odo utils config set timeout 5")
 			config_output := runCmd("odo utils config view|grep UpdateNotification")
-			Expect(config_output).To(ContainSubstring("true"))
+			Expect(config_output).To(ContainSubstring("false"))
 			Expect(config_output).To(ContainSubstring("UpdateNotification"))
 			config_output = runCmd("odo utils config view|grep Timeout")
 			Expect(config_output).To(ContainSubstring("5"))
