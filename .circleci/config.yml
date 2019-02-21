@@ -68,38 +68,69 @@ jobs:
             echo "Configured OpenShift cluster : v3.11.0"
             echo "Switching to regular user"
             oc login -u developer -p developer
-    
+            mkdir .kube-template
+            cp -rfv ${HOME}/.kube/* .kube-template 
+            
     - run: 
         name: Main e2e test
         command: |
             cd ${HOME}/go/src/github.com/redhat-developer/odo
-            make test-main-e2e
-
-    - run: 
-        name: Login e2e test
-        command: |
-            cd ${HOME}/go/src/github.com/redhat-developer/odo
-            make test-odo-login-e2e
-            # login e2e test leave oc client in logged out state
-            oc login -u developer -p developer
- 
-    - run: 
-        name: Component e2e test
-        command: |
-            cd ${HOME}/go/src/github.com/redhat-developer/odo
-            make test-cmp-e2e
-
+            mkdir ${HOME}/.kube/main-e2e
+            cp -rfv .kube-template ${HOME}/.kube/main-e2e
+            export KUBECONFIG="$HOME/.kube/main-e2e/config"
+            oc login localhost:8443 -u main-e2e -p main-e2e --insecure-skip-tls-verify=true
+            odo project create test-main-e2e
+            make test-main-e2e 
+        background: true
+            
     - run: 
         name: Java e2e test
         command: |
             cd ${HOME}/go/src/github.com/redhat-developer/odo
+            mkdir ${HOME}/.kube/java-e2e
+            cp -rfv .kube-template ${HOME}/.kube/java-e2e
+            export KUBECONFIG="$HOME/.kube/java-e2e/config"
+            oc login localhost:8443 -u java-e2e -p java-e2e --insecure-skip-tls-verify=true
+            odo project create test-java-e2e
             make test-java-e2e
+        background: true
 
     - run: 
         name: Source e2e test
         command: |
             cd ${HOME}/go/src/github.com/redhat-developer/odo
+            mkdir ${HOME}/.kube/source-e2e
+            cp -rfv .kube-template ${HOME}/.kube/source-e2e
+            export KUBECONFIG="$HOME/.kube/source-e2e/config"
+            oc login localhost:8443 -u source-e2e -p source-e2e --insecure-skip-tls-verify=true
+            odo project create test-source-e2e
             make test-source-e2e
+        background: true
+
+    - run: 
+        name: JSON e2e test
+        command: |
+            cd ${HOME}/go/src/github.com/redhat-developer/odo
+            mkdir ${HOME}/.kube/json-e2e
+            cp -rfv .kube-template ${HOME}/.kube/json-e2e
+            export KUBECONFIG="$HOME/.kube/json-e2e/config"
+            oc login localhost:8443 -u json-e2e -p json-e2e --insecure-skip-tls-verify=true
+            odo project create json-e2e
+            make test-json-format-output
+        background: true
+
+    - run: 
+        name: Component e2e test
+        command: |
+            cd ${HOME}/go/src/github.com/redhat-developer/odo
+            mkdir ${HOME}/.kube/cmp-e2e
+            cp -rfv .kube-template ${HOME}/.kube/cmp-e2e
+            export KUBECONFIG="$HOME/.kube/cmp-e2e/config"
+            oc login localhost:8443 -u cmp-e2e -p cmp-e2e --insecure-skip-tls-verify=true
+            odo project create test-cmp-e2e
+            sleep 20s && ls -R ~/.kube/
+            make test-cmp-e2e
+     
 
     #    - run: 
     #        name: Service-Catalog e2e tests
@@ -118,10 +149,14 @@ jobs:
     #        command: |
     #            cd ${HOME}/go/src/github.com/redhat-developer/odo
     #            make test-link-e2e
-
-    - run: 
-        name: JSON e2e test
-        command: |
-            cd ${HOME}/go/src/github.com/redhat-developer/odo
-            make test-json-format-output
-
+    #  
+    #  - run: 
+    #      name: JSON e2e test
+    #      command: |
+    #          cd ${HOME}/go/src/github.com/redhat-developer/odo
+    #          make test-json-format-output
+    #  - run: 
+    #      name: Login e2e test
+    #      command: |
+    #          cd ${HOME}/go/src/github.com/redhat-developer/odo
+    #          make test-odo-login-e2e
